@@ -1,0 +1,67 @@
+# FastAPI Backend
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+
+# Database
+sqlalchemy==2.0.43
+psycopg[binary]==3.2.9
+asyncpg==0.30.0
+alembic==1.16.4
+pgvector==0.4.1
+
+# Validation & Settings
+pydantic==2.11.7
+pydantic-settings==2.10.1
+email-validator==2.2.0
+
+# Authentication & Security
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.3.0
+
+# Environment Variables
+python-dotenv==1.1.1
+
+# LangChain Ecosystem
+langchain==0.3.27
+langchain-core==0.3.74
+langchain-community==0.3.27
+
+# LangGraph
+langgraph==0.6.6
+langgraph-checkpoint==2.1.1
+
+# OpenAI
+langchain-openai==0.3.30
+openai==1.101.0
+
+# Anthropic
+langchain-anthropic==0.3.18
+anthropic==0.64.0
+
+# HTTP & Async
+httpx==0.28.1
+anyio==4.10.0
+
+# WebSockets
+websockets==15.0.1
+
+# Token Counting
+tiktoken==0.11.0
+
+# File Uploads
+python-multipart==0.0.20
+
+# Background Tasks & Caching
+celery==5.5.3
+redis==6.4.0
+
+# Logging
+loguru==0.7.3
+
+# JSON Performance
+orjson==3.11.2
+
+# Testing
+pytest==8.4.1
+pytest-asyncio==1.1.0
