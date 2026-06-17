@@ -1,6 +1,6 @@
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel,ConfigDict
 
 
 class CompanionResponse(BaseModel):
@@ -9,7 +9,6 @@ class CompanionResponse(BaseModel):
     persona: str
     voice_id: str
     is_active: bool
-
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = ConfigDict(
+        from_attributes=True
+    )
