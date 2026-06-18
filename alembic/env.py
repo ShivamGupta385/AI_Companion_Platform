@@ -13,6 +13,7 @@ from backend.app.models.onboarding_history import OnboardingHistory
 from backend.app.models.task_history import TaskHistory
 from backend.app.models.user_insights import UserInsight
 from backend.app.models.user_onboarding import UserOnboarding
+from backend.app.models.document import Document
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

@@ -21,6 +21,8 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import ChatInput from "@/components/chat/ChatInput";
 import TypingIndicator from "@/components/chat/TypingIndicator";
 import {useRouter } from "next/navigation";
+import RagSidebar from "@/components/rag/RagSidebar";
+import AvatarContainer from "@/components/avatar/AvatarContainer";
 
 export default function ChatPage() {
 
@@ -35,6 +37,24 @@ export default function ChatPage() {
 
   const [loading, setLoading] =
     useState(false);
+
+
+  const [
+  speaking,
+  setSpeaking
+] = useState(false);
+
+  const [
+  selectedDocumentId,
+  setSelectedDocumentId
+] = useState<string | null>(
+  null
+);
+
+const [
+  selectedDocumentName,
+  setSelectedDocumentName
+] = useState("");
 
   const loadMessages =
     async () => {
@@ -87,115 +107,193 @@ export default function ChatPage() {
     };
 
   return (
-  <div className="h-screen bg-gray-50 flex flex-col">
+  <div className="h-screen flex bg-gray-50">
 
-    {/* Header */}
-    <div className="bg-white border-b">
+    <RagSidebar
+      selectedDocumentId={
+        selectedDocumentId
+      }
+      onSelectDocument={(
+        id,
+        name
+      ) => {
 
-      <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+        setSelectedDocumentId(id);
 
-        <div className="flex items-center gap-4">
+        setSelectedDocumentName(name);
 
-          <button
-            onClick={() =>
-              router.push("/companions")
-            }
-            className="
-              px-4
-              py-2
-              border
-              rounded-xl
-              hover:bg-gray-100
-              transition
-            "
-          >
-            ← Back
-          </button>
+      }}
+    />
 
-          <div className="h-12 w-12 rounded-full bg-black text-white flex items-center justify-center font-bold">
-            AI
-          </div>
+    {/* Chat Section */}
+    <div className="flex-1 flex flex-col">
 
-          <div>
+      {/* Header */}
+      <div className="bg-white border-b">
 
-            <h1 className="text-2xl font-bold text-gray-900">
-              AI Companion Chat
-            </h1>
+        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
 
-            <p className="text-gray-500 text-sm">
-              Personalized AI Assistant
-            </p>
+          <div className="flex items-center gap-4">
 
-          </div>
+            <button
+              onClick={() =>
+                router.push("/companions")
+              }
+              className="
+                px-4
+                py-2
+                border
+                rounded-xl
+                hover:bg-gray-100
+                transition
+              "
+            >
+              ← Back
+            </button>
 
-        </div>
-
-        <div className="flex items-center gap-2">
-
-          <div className="h-3 w-3 rounded-full bg-green-500" />
-
-          <span className="text-green-600 text-sm font-medium">
-            Online
-          </span>
-
-        </div>
-
-      </div>
-
-    </div>
-
-    {/* Messages Area */}
-    <div className="flex-1 overflow-y-auto">
-
-      <div className="max-w-5xl mx-auto px-6 py-8">
-
-        {messages.length === 0 ? (
-
-          <div className="h-full flex flex-col items-center justify-center text-center mt-24">
-
-            <div className="text-7xl mb-6">
-              🤖
+            <div className="h-12 w-12 rounded-full bg-black text-white flex items-center justify-center font-bold">
+              AI
             </div>
 
-            <h2 className="text-4xl font-bold text-gray-900 mb-3">
-              Start a Conversation
-            </h2>
+            <div>
 
-            <p className="text-gray-500 mb-10">
-              Ask anything to your AI Companion
-            </p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                AI Companion Chat
+              </h1>
+
+              <p className="text-gray-500 text-sm">
+                Personalized AI Assistant
+              </p>
+
+            </div>
 
           </div>
 
-        ) : (
+          <div className="flex items-center gap-2">
 
-          <>
-            <ChatWindow
-              messages={messages}
-            />
+            <div className="h-3 w-3 rounded-full bg-green-500" />
 
-            {loading && (
-              <TypingIndicator />
-            )}
-          </>
+            <span className="text-green-600 text-sm font-medium">
+              Online
+            </span>
 
-        )}
+          </div>
+
+        </div>
 
       </div>
 
-    </div>
+      {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto">
 
-    {/* Input Area */}
-    <div className="bg-white border-t">
+            <div className="max-w-5xl mx-auto px-6 py-8">
 
-      <div className="max-w-5xl mx-auto p-5">
+              <AvatarContainer
+                speaking={speaking}
+              />
 
-        <div className="bg-gray-50 border rounded-2xl p-3 shadow-sm">
+              {messages.length === 0 ? (
 
-          <ChatInput
-            loading={loading}
-            onSend={handleSend}
-          />
+                <div className="h-full flex flex-col items-center justify-center text-center mt-12">
+
+                  <h2 className="text-4xl font-bold text-gray-900 mb-3">
+                    Start a Conversation
+                  </h2>
+
+                  <p className="text-gray-500 mb-10">
+                    Ask anything to your AI Companion
+                  </p>
+
+                </div>
+
+              ) : (
+
+                <>
+                  <ChatWindow
+                    messages={messages}
+                    onSpeakStart={() =>
+                      setSpeaking(true)
+                    }
+                    onSpeakEnd={() =>
+                      setSpeaking(false)
+                    }
+                  />
+
+                  {loading && (
+                    <TypingIndicator />
+                  )}
+
+                </>
+
+              )}
+
+            </div>
+
+          </div>
+      {/* Input Area */}
+      <div className="bg-white border-t">
+
+        <div className="max-w-5xl mx-auto p-5">
+
+          {
+              selectedDocumentName && (
+
+                <div
+                  className="
+                    mb-3
+                    px-4
+                    py-2
+                    bg-blue-50
+                    border
+                    border-blue-200
+                    rounded-lg
+                    flex
+                    items-center
+                    justify-between
+                  "
+                >
+
+                  <div className="text-sm text-blue-700">
+
+                    📄 Using Document:
+
+                    <strong className="ml-1">
+                      {selectedDocumentName}
+                    </strong>
+
+                  </div>
+
+                  <button
+                    onClick={() => {
+
+                      setSelectedDocumentId(null);
+
+                      setSelectedDocumentName("");
+
+                    }}
+                    className="
+                      text-red-500
+                      hover:text-red-700
+                      font-bold
+                      text-lg
+                      px-2
+                    "
+                  >
+                    ✕
+                  </button>
+
+                </div>
+
+              )
+            }
+          <div className="bg-gray-50 border rounded-2xl p-3 shadow-sm">
+
+            <ChatInput
+              loading={loading}
+              onSend={handleSend}
+            />
+
+          </div>
 
         </div>
 

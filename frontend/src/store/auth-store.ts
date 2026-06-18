@@ -17,15 +17,23 @@ export const useAuthStore =
       Cookies.get("token") || null,
 
     setToken: (token) => {
+
       Cookies.set(
         "token",
-        token
+        token,
+        {
+          expires: 7,
+          sameSite: "strict",
+        }
       );
 
-      set({ token });
+      set({
+        token
+      });
     },
 
     logout: () => {
+
       Cookies.remove("token");
 
       set({

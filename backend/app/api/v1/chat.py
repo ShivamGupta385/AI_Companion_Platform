@@ -103,19 +103,22 @@ def chat(
         )
 
         result = graph.invoke(
-            {
-                "conversation_id": str(
-                    conversation.id
-                ),
-                "companion_name": companion.name,
-                "user_message": chat_data.message,
-                "user_profile": (
-                    onboarding.baseline_data
-                    if onboarding
-                    else {}
-                )
-            }
+        {
+        "conversation_id": str(
+            conversation.id
+        ),
+        "companion_name": companion.name,
+        "user_message": chat_data.message,
+        "user_id": str(
+            current_user.id
+        ),
+        "user_profile": (
+            onboarding.baseline_data
+            if onboarding
+            else {}
         )
+    }
+)
 
         ai_response = result["response"]
 

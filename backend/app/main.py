@@ -17,6 +17,10 @@ from backend.app.api.v1.chat import (
 
 from backend.app.api.v1.user_onboarding import router as user_onboarding_router
 
+from backend.app.api.v1 import tts
+
+from backend.app.api.v1 import documents
+
 app = FastAPI(
     title="AI Companion Platform",
     version="1.0.0"
@@ -63,6 +67,20 @@ app.include_router(
     prefix="/api/v1/chat",
     tags=["Chat"]
 )
+
+app.include_router(
+    tts.router,
+    prefix="/api/v1/tts",
+    tags=["Text To Speech"]
+)
+
+
+app.include_router(
+    documents.router,
+    prefix="/api/v1/documents",
+    tags=["Documents"]
+)
+
 
 @app.get("/")
 def root():
