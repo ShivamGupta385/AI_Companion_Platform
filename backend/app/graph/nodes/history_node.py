@@ -5,50 +5,19 @@ from backend.app.models.message import Message
 
 
 def history_node(state):
+    """
+    Placeholder for longer-term historical memory / summary memory.
 
-    db = SessionLocal()
+    Right now, recent conversation memory is already loaded by memory_node
+    from the messages table, so we avoid duplicate DB reads here.
 
-    try:
+    In future, this node can be used for:
+    - summarized older conversation history
+    - user preference history
+    - archived long-term memory
+    """
 
-        history = (
-            db.query(Message)
-            .filter(
-                Message.conversation_id
-                ==UUID(state["conversation_id"])
-            )
-            .order_by(
-                Message.created_at.asc()
-            )
-            .all()
-        )
-
-        messages = []
-
-        for msg in history:
-
-            if msg.sender_type == "user":
-
-                messages.append(
-                    (
-                        "human",
-                        msg.message_text
-                    )
-                )
-
-            else:
-
-                messages.append(
-                    (
-                        "assistant",
-                        msg.message_text
-                    )
-                )
-
-        return {
-            **state,
-            "history": messages
-        }
-
-    finally:
-
-        db.close()
+    return {
+        **state,
+        "history": state.get("history", [])
+    }

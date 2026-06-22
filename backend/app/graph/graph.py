@@ -7,8 +7,16 @@ from backend.app.graph.state import (
     CompanionState
 )
 
+from backend.app.graph.nodes.memory_node import (
+    memory_node
+)
+
 from backend.app.graph.nodes.history_node import (
     history_node
+)
+
+from backend.app.graph.nodes.long_term_memory_node import (
+    long_term_memory_node
 )
 
 from backend.app.graph.nodes.document_node import (
@@ -33,8 +41,18 @@ graph_builder = StateGraph(
 )
 
 graph_builder.add_node(
+    "memory",
+    memory_node
+)
+
+graph_builder.add_node(
     "history",
     history_node
+)
+
+graph_builder.add_node(
+    "long_term_memory",
+    long_term_memory_node
 )
 
 graph_builder.add_node(
@@ -58,14 +76,24 @@ graph_builder.add_node(
 )
 
 graph_builder.set_entry_point(
-    "history"
+    "memory"
 )
 
 # Flow:
-# history -> documents -> rag -> companion -> llm
+# memory -> history -> long_term_memory -> documents -> rag -> companion -> llm
+
+graph_builder.add_edge(
+    "memory",
+    "history"
+)
 
 graph_builder.add_edge(
     "history",
+    "long_term_memory"
+)
+
+graph_builder.add_edge(
+    "long_term_memory",
     "documents"
 )
 

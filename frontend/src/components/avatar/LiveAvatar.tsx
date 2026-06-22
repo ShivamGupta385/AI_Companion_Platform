@@ -1,76 +1,139 @@
 "use client";
 
-import Image from "next/image";
+import {
+  useEffect,
+  useRef
+} from "react";
 
-interface Props {
-  speaking: boolean;
-}
+import {
+  LiveAvatarSession
+} from "@heygen/liveavatar-web-sdk";
 
-export default function LiveAvatar({
-  speaking
-}: Props) {
+import {
+  liveAvatarService
+} from "@/services/liveavatar.service";
+
+export default function LiveAvatar() {
+
+  const sessionRef =
+    useRef<LiveAvatarSession | null>(
+      null
+    );
+  
+  const avatarContainerRef =
+  useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+
+    let mounted = true;
+
+    const startAvatar =
+      async () => {
+
+        try {
+
+          if (
+            sessionRef.current
+          ) {
+
+            console.log(
+              "⚠️ Avatar session already running"
+            );
+
+            return;
+          }
+
+          const data =
+            await liveAvatarService
+              .createSession();
+
+          if (!mounted) {
+            return;
+          }
+
+          const session =
+            new LiveAvatarSession(
+              data.sessionToken,
+              {
+                voiceChat: true
+              }
+            );
+
+          sessionRef.current =
+            session;
+
+          await session.start();
+
+          console.log(
+            "✅ Avatar Started"
+          );
+
+          console.log(
+            "SESSION OBJECT:",
+            session
+          );
+
+          console.log(
+            "SESSION KEYS:",
+            Object.keys(session)
+          );
+
+        } catch (error) {
+
+          console.error(
+            "❌ Session start failed:",
+            error
+          );
+
+        }
+
+      };
+
+    startAvatar();
+
+    return () => {
+
+      mounted = false;
+
+      if (
+        sessionRef.current
+      ) {
+
+        sessionRef.current
+          .stop()
+          .then(() => {
+
+            console.log(
+              "🛑 Avatar Session Stopped"
+            );
+
+          })
+          .catch(
+            console.error
+          );
+
+        sessionRef.current =
+          null;
+
+      }
+
+    };
+
+  }, []);
 
   return (
 
     <div
+      ref={avatarContainerRef}
       className="
-        flex
-        flex-col
-        items-center
-        justify-center
-        py-4
+        w-full
+        h-[500px]
+        border
+        rounded-xl
+        bg-black
       "
-    >
-
-      <div
-        className="
-          relative
-          w-[280px]
-          h-[280px]
-        "
-      >
-
-        <Image
-          src="/avatar/haru/runtime/haru.1024/texture_00.png"
-          alt="Haru Avatar"
-          fill
-          className="
-            object-contain
-            select-none
-          "
-          priority
-        />
-
-      </div>
-
-      <div
-        className={`
-          mt-4
-          bg-black
-          transition-all
-          duration-100
-
-          ${
-            speaking
-              ? "w-14 h-6 rounded-full"
-              : "w-10 h-2 rounded-md"
-          }
-        `}
-      />
-
-      <p
-        className="
-          text-xs
-          text-gray-500
-          mt-2
-        "
-      >
-        {speaking
-          ? "Speaking..."
-          : "Idle"}
-      </p>
-
-    </div>
+    />
 
   );
+
 }

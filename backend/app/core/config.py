@@ -24,6 +24,15 @@ class Settings(BaseSettings):
 
     PINECONE_INDEX_NAME: str
 
+    LIVEAVATAR_API_KEY: str
+
+    HEYGEN_API_KEY: str
+    
+    HEYGEN_AVATAR_ID: str
+
+    TAVUS_API_KEY: str
+    TAVUS_BASE_URL: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore"

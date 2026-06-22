@@ -1,10 +1,18 @@
 import uuid
 
-from sqlalchemy import String, Text, Boolean, DateTime
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    String,
+    Boolean,
+    DateTime
+)
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column
+)
 from sqlalchemy.sql import func
 
 from backend.app.db.base import Base
+
 
 class Companion(Base):
     __tablename__ = "companions"
@@ -20,17 +28,36 @@ class Companion(Base):
     )
 
     persona: Mapped[str] = mapped_column(
-        Text,
+        String(255),
         nullable=False
     )
 
-    voice_id: Mapped[str] = mapped_column(
-        String(100)
+    voice_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
     )
 
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True
+    )
+
+    # -------------------------
+    # Tavus avatar integration
+    # -------------------------
+    avatar_provider: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True
+    )
+
+    tavus_replica_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
+
+    tavus_persona_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
     )
 
     created_at: Mapped[DateTime] = mapped_column(

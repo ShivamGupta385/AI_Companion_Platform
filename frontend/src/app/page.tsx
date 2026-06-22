@@ -1,35 +1,69 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function HomePage() {
   const router = useRouter();
 
+  const companions = [
+    {
+      name: "Aria",
+      role: "Study Companion",
+      image: "/main/aria.png",
+      description:
+        "Your AI partner for learning, concepts and exam preparation.",
+    },
+    {
+      name: "Noor",
+      role: "Wellness Companion",
+      image: "/main/noor.png",
+      description:
+        "Your guide to mindfulness, peace and emotional wellbeing.",
+    },
+    {
+      name: "Rene",
+      role: "Life Coach",
+      image: "/main/rene.png",
+      description:
+        "Build habits, achieve goals and stay focused every day.",
+    },
+    {
+      name: "Max",
+      role: "Fitness Companion",
+      image: "/main/max.png",
+      description:
+        "Personalized workouts, nutrition and healthy habit tracking.",
+    },
+    {
+      name: "Victor",
+      role: "Business Companion",
+      image: "/main/victor.png",
+      description:
+        "Your advisor for strategy, growth and smarter decisions.",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-
+    <div className="min-h-screen bg-[#f8f8fc] overflow-hidden relative">
       {/* Background Glow */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/20 blur-[150px]" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 blur-[150px]" />
+      <div className="absolute top-20 right-20 w-[500px] h-[500px] bg-violet-300/30 rounded-full blur-[120px]" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-200/30 rounded-full blur-[120px]" />
 
-      <div className="relative z-10 min-h-screen flex flex-col">
-
+      <div className="relative z-10">
         {/* Navbar */}
-        <nav className="flex items-center justify-between px-10 py-6">
-
-          <h1 className="text-2xl font-bold text-white">
+        <nav className="max-w-7xl mx-auto px-8 py-8 flex items-center justify-between">
+          <h1 className="text-4xl font-bold text-[#0B1230]">
             AGIX
           </h1>
 
-          <div className="flex gap-4">
-
+          <div className="flex items-center gap-5">
             <button
-              onClick={() =>
-                router.push("/login")
-              }
+              onClick={() => router.push("/login")}
               className="
-                text-white
-                hover:text-blue-400
+                text-[#0B1230]
+                font-medium
+                hover:text-violet-600
                 transition
               "
             >
@@ -37,152 +71,249 @@ export default function HomePage() {
             </button>
 
             <button
-              onClick={() =>
-                router.push("/register")
-              }
+              onClick={() => router.push("/register")}
               className="
-                bg-white
-                text-black
-                px-5
-                py-2
+                px-6
+                py-3
                 rounded-full
-                font-semibold
+                text-white
+                bg-gradient-to-r
+                from-violet-600
+                to-purple-500
                 hover:scale-105
                 transition
               "
             >
               Register
             </button>
-
           </div>
-
         </nav>
 
         {/* Hero Section */}
-        <div className="flex-1 flex items-center justify-center px-6">
+        <section className="max-w-7xl mx-auto px-8 py-10">
+          <div className="grid lg:grid-cols-2 gap-10 items-center">
+            {/* Left */}
+            <div>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-[#0B1230]">
+                Your Personal
+                <span
+                  className="
+                  block
+                  bg-gradient-to-r
+                  from-violet-600
+                  to-purple-400
+                  bg-clip-text
+                  text-transparent
+                "
+                >
+                  AI Companion
+                </span>
+              </h1>
 
-          <div className="max-w-6xl text-center">
+              <p className="mt-8 text-xl text-slate-500 max-w-xl leading-relaxed">
+                Learn faster, stay productive, improve wellness,
+                build better habits, and grow your career with
+                intelligent AI companions designed for your goals.
+              </p>
 
-            <h1 className="text-6xl md:text-8xl font-bold text-white leading-tight">
+              <div className="flex flex-wrap gap-5 mt-10">
+                <button
+                  onClick={() => router.push("/register")}
+                  className="
+                    px-8
+                    py-4
+                    rounded-2xl
+                    text-white
+                    font-semibold
+                    bg-gradient-to-r
+                    from-violet-600
+                    to-purple-500
+                    hover:scale-105
+                    transition
+                  "
+                >
+                  Get Started →
+                </button>
 
-              Your Personal
+                <button
+                  onClick={() => router.push("/login")}
+                  className="
+                    px-8
+                    py-4
+                    rounded-2xl
+                    border-2
+                    border-violet-300
+                    text-violet-600
+                    font-semibold
+                    hover:bg-violet-50
+                    transition
+                  "
+                >
+                  Sign In
+                </button>
+              </div>
 
-              <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                AI Companion
-              </span>
+              <div className="flex flex-wrap gap-8 mt-10 text-slate-500">
+                <div>🔒 Private & Secure</div>
+                <div>✨ Personalized For You</div>
+                <div>⚡ Always Learning</div>
+              </div>
+            </div>
 
-            </h1>
+            {/* Right */}
+            <div className="relative flex justify-center items-center">
+              <div
+                className="
+                  absolute
+                  w-[450px]
+                  h-[450px]
+                  rounded-full
+                  bg-gradient-to-r
+                  from-violet-300
+                  to-purple-300
+                  opacity-40
+                "
+              />
 
-            <p className="mt-8 text-xl text-gray-400 max-w-3xl mx-auto">
-              Learn faster, stay productive,
-              improve wellness, build better habits,
-              and grow your career with intelligent
-              AI companions designed for your goals.
+              <div className="relative flex justify-center">
+                <div
+                  className="
+                    absolute
+                    w-[520px]
+                    h-[520px]
+                    rounded-full
+                    bg-gradient-to-r
+                    from-violet-300
+                    to-purple-300
+                    opacity-50
+                    blur-sm
+                  "
+                />
+
+                <Image
+                  src="/main/mainlogo.png"
+                  alt="AI Companion"
+                  width={550}
+                  height={550}
+                  className="relative z-10 object-contain"
+                  priority
+                />
+
+                <div className="absolute top-20 left-0 bg-white p-5 rounded-3xl shadow-lg w-40">
+                  <p className="font-semibold">Learn smarter</p>
+                  <p className="text-sm text-gray-500">
+                    AI-powered study sessions
+                  </p>
+                </div>
+
+                <div className="absolute top-18 right-0 bg-white p-5 rounded-3xl shadow-lg w-40">
+                  <p className="font-semibold">Feel better</p>
+                  <p className="text-sm text-gray-500">
+                    Mindfulness support
+                  </p>
+                </div>
+
+                <div className="absolute bottom-2 left-2 bg-white p-5 rounded-3xl shadow-lg w-40">
+                  <p className="font-semibold">Achieve goals</p>
+                  <p className="text-sm text-gray-500">
+                    Personalized roadmaps
+                  </p>
+                </div>
+
+                <div className="absolute bottom-2 right-0 bg-white p-5 rounded-3xl shadow-lg w-40">
+                  <p className="font-semibold">Track progress</p>
+                  <p className="text-sm text-gray-500">
+                    Insights that drive growth
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Companion Cards Section */}
+        <section className="max-w-7xl mx-auto px-8 py-20">
+          <div className="text-center mb-14">
+            <h2 className="text-4xl font-bold text-[#0B1230]">
+              Meet Your AI Companions
+            </h2>
+
+            <p className="mt-4 text-slate-500 max-w-2xl mx-auto">
+              Choose an AI companion tailored to your goals and get
+              personalized guidance every day.
             </p>
+          </div>
 
-            <div className="flex justify-center gap-5 mt-12">
-
-              <button
-                onClick={() =>
-                  router.push("/register")
-                }
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {companions.map((companion) => (
+              <div
+                key={companion.name}
                 className="
-                  px-8
-                  py-4
-                  bg-white
-                  text-black
-                  rounded-xl
-                  font-semibold
-                  hover:scale-105
-                  transition
-                "
-              >
-                Get Started
-              </button>
-
-              <button
-                onClick={() =>
-                  router.push("/login")
-                }
-                className="
-                  px-8
-                  py-4
+                  bg-white/80
+                  backdrop-blur-md
+                  rounded-[32px]
                   border
-                  border-white/20
-                  text-white
-                  rounded-xl
-                  hover:bg-white/10
-                  transition
+                  border-white
+                  shadow-lg
+                  overflow-hidden
+                  relative
+                  h-[420px]
+                  hover:-translate-y-2
+                  transition-all
+                  duration-300
                 "
               >
-                Sign In
-              </button>
+                <div className="p-6 relative z-10">
+                  <h3 className="text-2xl font-bold text-[#0B1230]">
+                    {companion.name}
+                  </h3>
 
-            </div>
+                  <p className="text-sm font-medium text-violet-600">
+                    {companion.role}
+                  </p>
 
+                  <p className="mt-4 text-sm text-slate-500">
+                    {companion.description}
+                  </p>
+                </div>
+
+                <Image
+                  src={companion.image}
+                  alt={companion.name}
+                  width={400}
+                  height={400}
+                  className="
+                    absolute
+                    bottom-0
+                    left-0
+                    w-full
+                    h-[280px]
+                    object-cover
+                  "
+                />
+
+                <button
+                  className="
+                    absolute
+                    bottom-5
+                    right-5
+                    w-12
+                    h-12
+                    rounded-full
+                    bg-white
+                    shadow-lg
+                    text-xl
+                    hover:bg-violet-600
+                    hover:text-white
+                    transition
+                  "
+                >
+                  →
+                </button>
+              </div>
+            ))}
           </div>
-
-        </div>
-
-        {/* Features */}
-        <div className="pb-16 px-8">
-
-          <div className="max-w-7xl mx-auto grid md:grid-cols-5 gap-5">
-
-            <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl p-6">
-              <h3 className="text-white font-bold text-xl mb-3">
-                📚 Aria
-              </h3>
-              <p className="text-gray-400">
-                Study Agent for learning,
-                concepts and exam preparation.
-              </p>
-            </div>
-
-            <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl p-6">
-              <h3 className="text-white font-bold text-xl mb-3">
-                🧘 Noor
-              </h3>
-              <p className="text-gray-400">
-                Wellness Agent for mindfulness,
-                peace and emotional wellbeing.
-              </p>
-            </div>
-
-            <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl p-6">
-              <h3 className="text-white font-bold text-xl mb-3">
-                🎯 Rene
-              </h3>
-              <p className="text-gray-400">
-                Life Coach Agent helping you
-                achieve goals and build habits.
-              </p>
-            </div>
-
-            <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl p-6">
-              <h3 className="text-white font-bold text-xl mb-3">
-                💪 Max
-              </h3>
-              <p className="text-gray-400">
-                Fitness Agent for workouts,
-                nutrition and healthy habits.
-              </p>
-            </div>
-
-            <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl p-6">
-              <h3 className="text-white font-bold text-xl mb-3">
-                💼 Victor
-              </h3>
-              <p className="text-gray-400">
-                Business Agent for startups,
-                strategy and entrepreneurship.
-              </p>
-            </div>
-
-          </div>
-
-        </div>
-
+        </section>
       </div>
     </div>
   );

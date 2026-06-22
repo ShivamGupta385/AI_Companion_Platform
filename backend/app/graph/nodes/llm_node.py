@@ -1,105 +1,171 @@
 from backend.app.services.llm_provider import llm
 
 
+MEMORY_QUERY_KEYWORDS = [
+    "remember",
+    "last conversation",
+    "previous conversation",
+    "previous chat",
+    "earlier conversation",
+    "what did we discuss",
+    "what did i say",
+    "what did we do",
+    "continue from last time",
+    "continue from previous",
+    "do you remember",
+    "our last chat",
+    "earlier in this chat",
+    "what project am i working on",
+    "what am i learning",
+]
+
+
+def is_memory_query(query: str) -> bool:
+    query_lower = query.lower().strip()
+    return any(keyword in query_lower for keyword in MEMORY_QUERY_KEYWORDS)
+
+
 def llm_node(state):
+    user_message = state["user_message"]
 
-    retrieved_context = state.get(
-        "retrieved_context",
-        ""
+    # Short-term memory (same conversation thread)
+    memory = state.get("memory", [])
+    history = state.get("history", [])
+
+    # Long-term memory (cross-conversation)
+    long_term_memories = state.get("long_term_memories", [])
+    conversation_summaries = state.get("conversation_summaries", [])
+
+    # Documents / RAG
+    documents = state.get("document_names", [])
+    retrieved_context = state.get("retrieved_context", "")
+
+    # Query type
+    memory_query = is_memory_query(user_message)
+
+    # Meaningful thread memory:
+    # If memory only contains current user message, don't pretend we know past thread context.
+    has_meaningful_thread_memory = len(memory) >= 2
+
+    thread_memory_status = (
+        "Conversation history from this thread is available."
+        if has_meaningful_thread_memory
+        else "There is no meaningful earlier conversation history in this thread yet."
     )
 
-    documents = state.get(
-        "document_names",
-        []
+    long_term_memory_status = (
+        "Cross-conversation long-term memory is available."
+        if long_term_memories or conversation_summaries
+        else "No cross-conversation long-term memory is available yet."
     )
 
-    messages = [
-        (
-            "system",
-            f"""
-            {state['system_prompt']}
+    system_prompt = f"""
+{state.get('system_prompt', '')}
 
-            USER PROFILE:
-            {state.get('user_profile', {})}
+USER PROFILE:
+{state.get('user_profile', {})}
 
-            AVAILABLE DOCUMENTS:
-            {documents}
+THREAD CONVERSATION MEMORY:
+{memory}
 
-            RETRIEVED DOCUMENT CONTEXT:
-            {retrieved_context}
+THREAD MEMORY STATUS:
+{thread_memory_status}
 
-            IMPORTANT INSTRUCTIONS:
+LONG-TERM USER MEMORY:
+{long_term_memories}
 
-            1. The document names above come from the user's uploaded documents.
+PAST CONVERSATION SUMMARIES:
+{conversation_summaries}
 
-            2. The retrieved document context comes from those uploaded documents.
+LONG-TERM MEMORY STATUS:
+{long_term_memory_status}
 
-            3. If the user asks:
-               - What documents have I uploaded?
-               - Show my uploaded documents
-               - Tell me the document name
-               - Which files do I have?
+AVAILABLE DOCUMENTS:
+{documents}
 
-               Then use AVAILABLE DOCUMENTS.
+RETRIEVED DOCUMENT CONTEXT:
+{retrieved_context}
 
-            4. If the user asks:
-               - Summarize document
-               - Explain document
-               - Analyze document
-               - What is inside the document
-               - Tell me about uploaded file
+IMPORTANT INSTRUCTIONS:
 
-               Then use RETRIEVED DOCUMENT CONTEXT.
+1. You have access to THREE kinds of context:
+   A) THREAD CONVERSATION MEMORY = messages from the current conversation thread
+   B) LONG-TERM USER MEMORY = durable memories collected from older conversations
+   C) PAST CONVERSATION SUMMARIES = summaries of previous chat threads
 
-            5. Never say:
-               - No document uploaded
-               - I cannot access documents
-               - Please upload a document
+2. Use THREAD CONVERSATION MEMORY first for follow-up questions inside the current chat.
 
-               if AVAILABLE DOCUMENTS or
-               RETRIEVED DOCUMENT CONTEXT exists.
+3. Use LONG-TERM USER MEMORY and PAST CONVERSATION SUMMARIES when the user asks about things discussed in older conversations or asks for remembered personal/project context across chats.
 
-            6. Prioritize uploaded document information
-               over general knowledge.
+4. If the user asks a memory-related question and meaningful thread memory exists, answer from the current thread memory first.
 
-            7. If document content exists,
-               answer directly using the content.
+5. If the user asks a memory-related question but there is no meaningful thread memory in the current chat, check LONG-TERM USER MEMORY and PAST CONVERSATION SUMMARIES before saying you don't know.
 
-            8. If document names exist,
-               mention them when relevant.
-            """
-        )
-    ]
+6. If relevant information exists in LONG-TERM USER MEMORY or PAST CONVERSATION SUMMARIES, use it naturally. Examples:
+   - "You're working on the AGIX internship project."
+   - "Earlier we discussed FastAPI, LangGraph, and conversation memory."
 
-    messages.extend(
-        state.get(
-            "history",
-            []
-        )
-    )
+7. If the user asks a memory-related question and there is no relevant information in:
+   - current thread memory
+   - long-term memory
+   - conversation summaries
+   then say that naturally.
+   Example:
+   - "I don't see that in our current chat or saved conversation memory yet."
 
-    messages.append(
-        (
-            "human",
-            state["user_message"]
-        )
-    )
+8. Do NOT invent previous discussion details.
 
-    print("=" * 50)
-    print(
-        "DOCUMENTS:",
-        documents
-    )
-    print(
-        "RETRIEVED CONTEXT LENGTH:",
-        len(retrieved_context)
-    )
-    print("=" * 50)
+9. Do NOT say "I don't have access to previous conversations" if long-term memory or summaries are available.
 
-    response = llm.invoke(
-        messages
-    )
+10. AVAILABLE DOCUMENTS are the user's uploaded files.
 
+11. RETRIEVED DOCUMENT CONTEXT comes from those uploaded files.
+
+12. If the user asks about uploaded files, use AVAILABLE DOCUMENTS.
+
+13. If the user asks to summarize, analyze, or explain uploaded files, use RETRIEVED DOCUMENT CONTEXT.
+
+14. For memory-related questions:
+    priority order should be:
+    (1) current thread memory
+    (2) long-term user memory
+    (3) past conversation summaries
+
+15. For document-related questions:
+    prioritize retrieved document context over general knowledge.
+
+16. Maintain continuity with the companion persona, the user's onboarding profile, and remembered project context.
+"""
+
+    messages = [("system", system_prompt)]
+
+    # Add short-term thread memory
+    if memory:
+        messages.extend(memory)
+
+    # Add optional history
+    if history:
+        messages.extend(history)
+
+    # Add current user message
+    messages.append(("human", user_message))
+
+    print("=" * 60)
+    print("[LLM NODE] conversation_id:", state.get("conversation_id"))
+    print("[LLM NODE] companion_id:", state.get("companion_id"))
+    print("[LLM NODE] user_message:", user_message)
+    print("[LLM NODE] memory_query:", memory_query)
+    print("[LLM NODE] thread memory messages:", len(memory))
+    print("[LLM NODE] has_meaningful_thread_memory:", has_meaningful_thread_memory)
+    print("[LLM NODE] long_term_memories:", len(long_term_memories))
+    print("[LLM NODE] conversation_summaries:", len(conversation_summaries))
+    print("[LLM NODE] documents:", documents)
+    print("[LLM NODE] retrieved_context length:", len(retrieved_context))
+    print("=" * 60)
+
+    response = llm.invoke(messages)
+
+    print("[LLM NODE RESPONSE]")
     print(response.content)
 
     return {

@@ -2,23 +2,33 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  User,
+  AtSign,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 import { authService } from "@/services/auth.service";
-
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 export default function RegisterForm() {
   const router = useRouter();
 
-  const [formData, setFormData] = useState({
-    full_name: "",
-    username: "",
-    email: "",
-    password: "",
-  });
+  const [showPassword, setShowPassword] =
+    useState(false);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
+
+  const [formData, setFormData] =
+    useState({
+      full_name: "",
+      username: "",
+      email: "",
+      password: "",
+    });
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -37,18 +47,14 @@ export default function RegisterForm() {
     try {
       setLoading(true);
 
-      await authService.register(formData);
-
-      alert("Registration successful!");
+      await authService.register(
+        formData
+      );
 
       router.push("/login");
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-
-      alert(
-        error?.response?.data?.detail ||
-          "Registration failed"
-      );
+      alert("Registration Failed");
     } finally {
       setLoading(false);
     }
@@ -57,47 +63,84 @@ export default function RegisterForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 w-full max-w-md"
+      className="space-y-5"
     >
-      <Input
-        name="full_name"
-        placeholder="Full Name"
-        value={formData.full_name}
-        onChange={handleChange}
-      />
+      <div className="relative">
+        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-violet-500" />
+        <input
+          name="full_name"
+          placeholder="Full Name"
+          value={formData.full_name}
+          onChange={handleChange}
+          className="w-full rounded-xl border border-gray-200 py-4 pl-12 pr-4"
+        />
+      </div>
 
-      <Input
-        name="username"
-        placeholder="Username"
-        value={formData.username}
-        onChange={handleChange}
-      />
+      <div className="relative">
+        <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-violet-500" />
+        <input
+          name="username"
+          placeholder="Username"
+          value={formData.username}
+          onChange={handleChange}
+          className="w-full rounded-xl border border-gray-200 py-4 pl-12 pr-4"
+        />
+      </div>
 
-      <Input
-        type="email"
-        name="email"
-        placeholder="Email"
-        value={formData.email}
-        onChange={handleChange}
-      />
+      <div className="relative">
+        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-violet-500" />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          className="w-full rounded-xl border border-gray-200 py-4 pl-12 pr-4"
+        />
+      </div>
 
-      <Input
-        type="password"
-        name="password"
-        placeholder="Password"
-        value={formData.password}
-        onChange={handleChange}
-      />
+      <div className="relative">
+        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-violet-500" />
 
-      <Button
+        <input
+          type={
+            showPassword
+              ? "text"
+              : "password"
+          }
+          name="password"
+          placeholder="Password"
+          value={formData.password}
+          onChange={handleChange}
+          className="w-full rounded-xl border border-gray-200 py-4 pl-12 pr-12"
+        />
+
+        <button
+          type="button"
+          onClick={() =>
+            setShowPassword(
+              !showPassword
+            )
+          }
+          className="absolute right-4 top-1/2 -translate-y-1/2"
+        >
+          {showPassword ? (
+            <EyeOff size={18} />
+          ) : (
+            <Eye size={18} />
+          )}
+        </button>
+      </div>
+
+      <button
         type="submit"
-        className="w-full"
         disabled={loading}
+        className="h-14 w-full rounded-xl bg-gradient-to-r from-violet-600 to-purple-400 text-lg font-semibold text-white shadow-lg"
       >
         {loading
-          ? "Creating Account..."
-          : "Register"}
-      </Button>
+          ? "Creating..."
+          : "Create Account →"}
+      </button>
     </form>
   );
 }

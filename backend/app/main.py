@@ -1,25 +1,36 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-
 from backend.app.api.v1.auth import router as auth_router
+from backend.app.api.v1.users import (
+    router as users_router
+)
 from backend.app.api.v1.companions import (
     router as companion_router
 )
 from backend.app.api.v1.conversations import (
     router as conversation_router
 )
-
 from backend.app.api.v1.chat import (
     router as chat_router
 )
-
-
-from backend.app.api.v1.user_onboarding import router as user_onboarding_router
+from backend.app.api.v1.user_onboarding import (
+    router as user_onboarding_router
+)
 
 from backend.app.api.v1 import tts
-
 from backend.app.api.v1 import documents
+
+from backend.app.api.v1.liveavatar import (
+    router as liveavatar_router
+)
+from backend.app.api.v1.heygenavatar import (
+    router as heygen_router
+)
+
+from backend.app.api.v1.tavus import (
+    router as tavus_router
+)
 
 app = FastAPI(
     title="AI Companion Platform",
@@ -37,11 +48,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.include_router(
     auth_router,
     prefix="/api/v1/auth",
     tags=["Authentication"]
+)
+
+app.include_router(
+    users_router,
+    prefix="/api/v1/users",
+    tags=["Users"]
 )
 
 app.include_router(
@@ -74,20 +90,32 @@ app.include_router(
     tags=["Text To Speech"]
 )
 
-
 app.include_router(
     documents.router,
     prefix="/api/v1/documents",
     tags=["Documents"]
 )
 
+app.include_router(
+    liveavatar_router,
+    prefix="/api/v1/liveavatar",
+    tags=["LiveAvatar"]
+)
+
+app.include_router(
+    heygen_router,
+    prefix="/api/v1/heygenavatar",
+    tags=["HeyGen Avatar"]
+)
+
+app.include_router(
+    tavus_router,
+    prefix="/api/v1/tavus",
+    tags=["Tavus Avatar"]
+)
 
 @app.get("/")
 def root():
     return {
         "message": "AI Companion Platform API"
     }
-
-
-
-

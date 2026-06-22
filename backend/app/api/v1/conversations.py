@@ -7,15 +7,19 @@ from fastapi import (
     status
 )
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from backend.app.db.session import get_db
 from backend.app.models.conversation import Conversation
 from backend.app.models.companion import Companion
 from backend.app.models.user import User
+from backend.app.models.message import Message
 
 from backend.app.schemas.conversation_schema import (
     ConversationCreate,
-    ConversationResponse
+    ConversationResponse,
+    ConversationListItem,
+    ConversationDetailResponse
 )
 
 from backend.app.core.security import get_current_user
@@ -68,33 +72,71 @@ def create_conversation(
 
 @router.get(
     "/",
-    response_model=list[ConversationResponse]
+    response_model=list[ConversationListItem]
 )
 def get_conversations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Get all conversations of the current user.
+    Get all conversations of the current user with:
+    - companion name
+    - last message
+    - message count
     """
 
     conversations = (
         db.query(Conversation)
-        .filter(
-            Conversation.user_id == current_user.id
-        )
-        .order_by(
-            Conversation.updated_at.desc()
-        )
+        .filter(Conversation.user_id == current_user.id)
+        .order_by(Conversation.updated_at.desc())
         .all()
     )
 
-    return conversations
+    results = []
+
+    for conversation in conversations:
+        companion = (
+            db.query(Companion)
+            .filter(Companion.id == conversation.companion_id)
+            .first()
+        )
+
+        last_message_obj = (
+            db.query(Message)
+            .filter(Message.conversation_id == conversation.id)
+            .order_by(Message.created_at.desc())
+            .first()
+        )
+
+        message_count = (
+            db.query(func.count(Message.id))
+            .filter(Message.conversation_id == conversation.id)
+            .scalar()
+        ) or 0
+
+        results.append(
+            ConversationListItem(
+                id=conversation.id,
+                user_id=conversation.user_id,
+                companion_id=conversation.companion_id,
+                companion_name=companion.name if companion else "Unknown Companion",
+                conversation_type=conversation.conversation_type,
+                started_at=conversation.started_at,
+                updated_at=conversation.updated_at,
+                last_message=(
+                    last_message_obj.message_text
+                    if last_message_obj else None
+                ),
+                message_count=message_count
+            )
+        )
+
+    return results
 
 
 @router.get(
     "/{conversation_id}",
-    response_model=ConversationResponse
+    response_model=ConversationDetailResponse
 )
 def get_conversation(
     conversation_id: UUID,
@@ -102,7 +144,8 @@ def get_conversation(
     db: Session = Depends(get_db)
 ):
     """
-    Get a specific conversation.
+    Get a specific conversation with companion details.
+    Used by the chat page / Tavus panel.
     """
 
     conversation = (
@@ -120,4 +163,18 @@ def get_conversation(
             detail="Conversation not found"
         )
 
-    return conversation
+    companion = (
+        db.query(Companion)
+        .filter(Companion.id == conversation.companion_id)
+        .first()
+    )
+
+    return ConversationDetailResponse(
+        id=conversation.id,
+        user_id=conversation.user_id,
+        companion_id=conversation.companion_id,
+        companion_name=companion.name if companion else "Unknown Companion",
+        conversation_type=conversation.conversation_type,
+        started_at=conversation.started_at,
+        updated_at=conversation.updated_at
+    )

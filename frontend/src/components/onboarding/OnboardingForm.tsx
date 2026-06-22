@@ -3,15 +3,21 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { onboardingService } from "@/services/onboarding.service";
+import {
+  Calendar,
+  GraduationCap,
+  Globe,
+  Heart,
+  BookOpen,
+} from "lucide-react";
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { onboardingService } from "@/services/onboarding.service";
 
 export default function OnboardingForm() {
   const router = useRouter();
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
   const [isUpdate, setIsUpdate] =
     useState(false);
@@ -53,12 +59,7 @@ export default function OnboardingForm() {
 
       setIsUpdate(true);
 
-    } catch (error) {
-
-      console.log(
-        "No onboarding found"
-      );
-
+    } catch {
       setIsUpdate(false);
     }
   };
@@ -76,11 +77,9 @@ export default function OnboardingForm() {
   const handleSubmit = async (
     e: React.FormEvent
   ) => {
-
     e.preventDefault();
 
     try {
-
       setLoading(true);
 
       const payload = {
@@ -98,93 +97,109 @@ export default function OnboardingForm() {
       };
 
       if (isUpdate) {
-
         await onboardingService.update(
           payload
         );
-
       } else {
-
         await onboardingService.create(
           payload
         );
       }
 
-      alert(
-        isUpdate
-          ? "Profile updated successfully"
-          : "Profile created successfully"
-      );
-
-      router.replace(
-        "/dashboard"
-      );
+      router.replace("/dashboard");
 
     } catch (error) {
-
       console.error(error);
-
-      alert(
-        "Failed to save onboarding"
-      );
-
     } finally {
-
       setLoading(false);
     }
   };
 
+  const inputStyle =
+    "w-full rounded-2xl border border-slate-200 py-4 pl-14 pr-4 outline-none focus:border-violet-500";
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4"
+      className="space-y-5"
     >
-      <Input
-        name="age"
-        placeholder="Age"
-        value={formData.age}
-        onChange={handleChange}
-      />
+      <div className="relative">
+        <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-violet-500" />
+        <input
+          name="age"
+          placeholder="Age"
+          value={formData.age}
+          onChange={handleChange}
+          className={inputStyle}
+        />
+      </div>
 
-      <Input
-        name="occupation"
-        placeholder="Occupation"
-        value={formData.occupation}
-        onChange={handleChange}
-      />
+      <div className="relative">
+        <GraduationCap className="absolute left-5 top-1/2 -translate-y-1/2 text-violet-500" />
+        <input
+          name="occupation"
+          placeholder="Occupation"
+          value={formData.occupation}
+          onChange={handleChange}
+          className={inputStyle}
+        />
+      </div>
 
-      <Input
-        name="country"
-        placeholder="Country"
-        value={formData.country}
-        onChange={handleChange}
-      />
+      <div className="relative">
+        <Globe className="absolute left-5 top-1/2 -translate-y-1/2 text-violet-500" />
+        <input
+          name="country"
+          placeholder="Country"
+          value={formData.country}
+          onChange={handleChange}
+          className={inputStyle}
+        />
+      </div>
 
-      <Input
-        name="goals"
-        placeholder="Goals"
-        value={formData.goals}
-        onChange={handleChange}
-      />
+      <div className="relative">
+        <Heart className="absolute left-5 top-1/2 -translate-y-1/2 text-violet-500" />
+        <input
+          name="goals"
+          placeholder="Goals"
+          value={formData.goals}
+          onChange={handleChange}
+          className={inputStyle}
+        />
+      </div>
 
-      <Input
-        name="interests"
-        placeholder="Interests"
-        value={formData.interests}
-        onChange={handleChange}
-      />
+      <div className="relative">
+        <BookOpen className="absolute left-5 top-1/2 -translate-y-1/2 text-violet-500" />
+        <input
+          name="interests"
+          placeholder="Interests"
+          value={formData.interests}
+          onChange={handleChange}
+          className={inputStyle}
+        />
+      </div>
 
-      <Button
+      <button
         type="submit"
-        className="w-full"
         disabled={loading}
+        className="
+          w-full
+          rounded-2xl
+          bg-gradient-to-r
+          from-violet-600
+          to-purple-400
+          py-4
+          text-lg
+          font-semibold
+          text-white
+        "
       >
         {loading
           ? "Saving..."
           : isUpdate
-          ? "Update Profile"
-          : "Create Profile"}
-      </Button>
+          ? "Update Profile →"
+          : "Create Profile →"}
+      </button>
+
     </form>
   );
 }

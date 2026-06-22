@@ -1,40 +1,106 @@
+import Image from "next/image";
 import RegisterForm from "@/components/auth/RegisterForm";
+import Link from "next/link";
 
 export default function RegisterPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white">
+    <div className="min-h-screen bg-[#f8f7ff]">
 
-      {/* Background Effects */}
-      <div className="absolute top-0 left-0 h-96 w-96 rounded-full bg-blue-100 blur-3xl opacity-50" />
-      <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-purple-100 blur-3xl opacity-50" />
+      <div className="grid min-h-screen lg:grid-cols-2">
 
-      {/* Grid Pattern */}
-      <div
-        className="absolute inset-0 opacity-30"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
+        {/* LEFT SIDE */}
 
-      {/* Content */}
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
-        <div className="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-8 shadow-xl">
+        <div className="relative hidden lg:flex items-center justify-center overflow-hidden">
 
-          <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold text-gray-900">
-              Create Account
-            </h1>
-            <p className="mt-3 text-gray-500">
-              Join us and get started today
-            </p>
+          <div className="absolute left-10 top-10 text-5xl font-black">
+            AGIX
           </div>
 
-          <RegisterForm />
+          <div className="absolute left-175 top-10 rounded-3xl bg-white p-5 shadow-xl">
+            <p className="text-lg">
+              Let's build your
+            </p>
+            <p className="font-semibold text-violet-600">
+              AI companion
+            </p>
+            <p>experience ✨</p>
+          </div>
+
+          <div className="absolute h-[650px] w-[650px] rounded-full bg-violet-200 opacity-30" />
+
+          <Image
+            src="/register/register.png"
+            alt="AI Assistant"
+            width={700}
+            height={700}
+            className="relative z-10 object-contain"
+            priority
+          />
+        </div>
+
+        {/* RIGHT SIDE */}
+
+        <div className="flex items-center justify-center p-8">
+
+          <div className="w-full max-w-2xl rounded-[40px] border border-white/40 bg-white/80 p-10 shadow-2xl backdrop-blur-xl">
+
+            <div className="mb-8 text-center">
+
+              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-r from-violet-500 to-purple-300 text-4xl text-white">
+                🤖
+              </div>
+
+              <h1 className="text-6xl font-bold text-slate-900">
+                Create Account
+              </h1>
+
+              <p className="mt-4 text-lg text-gray-500">
+                Join us and get started today
+              </p>
+
+              <div className="mx-auto mt-4 h-1 w-14 rounded-full bg-violet-500" />
+            </div>
+
+            <RegisterForm />
+
+            <div className="my-8 flex items-center">
+              <div className="h-px flex-1 bg-gray-200" />
+              <span className="px-4 text-gray-500">
+                or continue with
+              </span>
+              <div className="h-px flex-1 bg-gray-200" />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <button className="rounded-xl border p-3">
+                Google
+              </button>
+
+              <button className="rounded-xl border p-3">
+                Microsoft
+              </button>
+
+              <button className="rounded-xl border p-3">
+                Apple
+              </button>
+            </div>
+
+            <p className="mt-8 text-center text-gray-600">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="font-semibold text-violet-600 transition hover:text-violet-700 hover:underline"
+            >
+              Sign In →
+            </Link>
+          </p>
+
+          </div>
 
         </div>
+
       </div>
+
     </div>
   );
 }

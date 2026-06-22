@@ -1,14 +1,8 @@
 "use client";
 
-import LiveAvatar from "./LiveAvatar";
+import HeyGenAvatar from "./HeyGenAvatar";
 
-interface Props {
-  speaking: boolean;
-}
-
-export default function AvatarContainer({
-  speaking
-}: Props) {
+export default function AvatarContainer() {
 
   return (
 
@@ -16,13 +10,11 @@ export default function AvatarContainer({
       className="
         flex
         justify-center
-        mb-6
+        py-4
       "
     >
 
-      <LiveAvatar
-        speaking={speaking}
-      />
+      <HeyGenAvatar />
 
     </div>
 
