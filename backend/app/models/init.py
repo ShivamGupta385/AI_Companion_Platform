@@ -8,3 +8,5 @@ from backend.app.models.user_insights import UserInsight
 from backend.app.models.user_onboarding import UserOnboarding
 from backend.app.models.conversation_summary import ConversationSummary
 from backend.app.models.user_memory import UserMemory
+from backend.app.models.knowledge_edge import KnowledgeEdge
+from backend.app.models.knowledge_node import KnowledgeNode

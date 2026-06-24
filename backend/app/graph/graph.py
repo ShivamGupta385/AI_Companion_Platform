@@ -27,6 +27,10 @@ from backend.app.graph.nodes.rag_node import (
     rag_node
 )
 
+from backend.app.graph.nodes.graph_rag_node import (
+    graph_rag_node
+)
+
 from backend.app.graph.nodes.companion_node import (
     companion_node
 )
@@ -40,6 +44,9 @@ graph_builder = StateGraph(
     CompanionState
 )
 
+# --------------------------------------------------
+# Nodes
+# --------------------------------------------------
 graph_builder.add_node(
     "memory",
     memory_node
@@ -66,6 +73,11 @@ graph_builder.add_node(
 )
 
 graph_builder.add_node(
+    "graph_rag",
+    graph_rag_node
+)
+
+graph_builder.add_node(
     "companion",
     companion_node
 )
@@ -75,13 +87,18 @@ graph_builder.add_node(
     llm_node
 )
 
+# --------------------------------------------------
+# Entry point
+# --------------------------------------------------
 graph_builder.set_entry_point(
     "memory"
 )
 
-# Flow:
-# memory -> history -> long_term_memory -> documents -> rag -> companion -> llm
-
+# --------------------------------------------------
+# Flow
+# memory -> history -> long_term_memory -> documents
+# -> rag -> graph_rag -> companion -> llm
+# --------------------------------------------------
 graph_builder.add_edge(
     "memory",
     "history"
@@ -104,6 +121,11 @@ graph_builder.add_edge(
 
 graph_builder.add_edge(
     "rag",
+    "graph_rag"
+)
+
+graph_builder.add_edge(
+    "graph_rag",
     "companion"
 )
 

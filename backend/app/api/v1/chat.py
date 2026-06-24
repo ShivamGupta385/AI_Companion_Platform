@@ -7,6 +7,7 @@ from fastapi import (
 
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
+import traceback
 
 from backend.app.db.session import get_db
 
@@ -136,9 +137,12 @@ def chat(
             limit=12
         )
 
-        print(f"[CHAT] Current Companion: {companion.name}")
-        print(f"[CHAT] Conversation ID: {conversation.id}")
-        print(f"[CHAT] Memory buffer size: {len(memory_buffer)}")
+        print("=" * 80)
+        print("[CHAT] Current Companion:", companion.name)
+        print("[CHAT] Conversation ID:", conversation.id)
+        print("[CHAT] Memory buffer size:", len(memory_buffer))
+        print("[CHAT] User message:", chat_data.message)
+        print("=" * 80)
 
         # ---------------------------------------------------
         # 3) Invoke LangGraph with short-term memory
@@ -163,6 +167,11 @@ def chat(
                 }
             }
         )
+
+        print("=" * 80)
+        print("[CHAT] GRAPH RESULT KEYS:", result.keys() if isinstance(result, dict) else type(result))
+        print("[CHAT] GRAPH RESULT:", result)
+        print("=" * 80)
 
         ai_response = result.get("response", "")
 
@@ -199,7 +208,6 @@ def chat(
 
         print(f"[CHAT] Message count for conversation: {message_count}")
 
-        # Only summarize / extract memories after enough context exists
         if message_count >= 8:
             print("[CHAT] Triggering long-term memory update...")
 
@@ -230,6 +238,18 @@ def chat(
 
     except Exception as e:
         db.rollback()
+
+        print("\n" + "=" * 100)
+        print("[CHAT ROUTE ERROR]")
+        print("Conversation ID:", conversation.id if conversation else None)
+        print("Companion ID:", companion.id if companion else None)
+        print("User ID:", current_user.id if current_user else None)
+        print("User message:", chat_data.message)
+        print("Error:", str(e))
+        print("TRACEBACK:")
+        traceback.print_exc()
+        print("=" * 100 + "\n")
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Graph Error: {str(e)}"

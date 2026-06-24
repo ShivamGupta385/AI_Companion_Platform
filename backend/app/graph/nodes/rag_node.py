@@ -1,3 +1,4 @@
+import traceback
 from backend.app.services.retriever_service import retrieve_context
 
 
@@ -15,44 +16,69 @@ MEMORY_QUERY_KEYWORDS = [
     "do you remember",
     "our last chat",
     "earlier in this chat",
+    "what project am i working on",
+    "what am i learning",
 ]
 
 
 def is_memory_query(query: str) -> bool:
     query_lower = query.lower().strip()
-
-    return any(keyword in query_lower for keyword in MEMORY_QUERY_KEYWORDS)
+    return any(
+        keyword in query_lower
+        for keyword in MEMORY_QUERY_KEYWORDS
+    )
 
 
 def rag_node(state):
-    query = state["user_message"]
+    try:
+        query = state.get("user_message", "")
 
-    # If user is asking about previous conversation / memory,
-    # do NOT use document retrieval as the primary source.
-    if is_memory_query(query):
-        print("=" * 50)
-        print("[RAG NODE] Memory-style query detected")
+        if not query or not query.strip():
+            print("=" * 60)
+            print("[RAG NODE] Empty query")
+            print("=" * 60)
+            return {
+                **state,
+                "retrieved_context": ""
+            }
+
+        query = query.strip()
+
+        if is_memory_query(query):
+            print("=" * 60)
+            print("[RAG NODE] Memory query detected")
+            print("QUERY:", query)
+            print("Skipping vector retrieval")
+            print("=" * 60)
+
+            return {
+                **state,
+                "retrieved_context": ""
+            }
+
+        print("=" * 60)
+        print("[RAG NODE] Running retrieval")
         print("QUERY:", query)
-        print("Skipping document retrieval for this query.")
-        print("=" * 50)
+
+        context = retrieve_context(query)
+
+        if context is None:
+            context = ""
+
+        print("[RAG NODE] CONTEXT LENGTH:", len(context))
+        print("[RAG NODE] CONTEXT PREVIEW:")
+        print(context[:500] if context else "No retrieved context")
+        print("=" * 60)
 
         return {
             **state,
-            "retrieved_context": ""
+            "retrieved_context": context
         }
 
-    # Otherwise, run normal RAG retrieval
-    context = retrieve_context(query)
-
-    print("=" * 50)
-    print("[RAG NODE] Document / knowledge query")
-    print("QUERY:", query)
-    print("CONTEXT LENGTH:", len(context))
-    print("CONTEXT:")
-    print(context[:500])
-    print("=" * 50)
-
-    return {
-        **state,
-        "retrieved_context": context
-    }
+    except Exception as e:
+        print("=" * 60)
+        print("[RAG NODE ERROR]")
+        print("ERROR:", str(e))
+        traceback.print_exc()
+        print("=" * 60)
+        raise

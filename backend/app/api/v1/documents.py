@@ -9,34 +9,19 @@ from fastapi import (
     HTTPException,
     status
 )
-
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
-
 from backend.app.models.user import User
 from backend.app.models.document import Document
-
-from backend.app.schemas.document_schema import (
-    DocumentResponse
-)
-
-from backend.app.services.ingestion_service import (
-    ingest_document
-)
-
-from backend.app.core.security import (
-    get_current_user
-)
+from backend.app.schemas.document_schema import DocumentResponse
+from backend.app.services.ingestion_service import ingest_document
+from backend.app.core.security import get_current_user
 
 router = APIRouter()
 
 UPLOAD_DIR = "uploads"
-
-os.makedirs(
-    UPLOAD_DIR,
-    exist_ok=True
-)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @router.post(
@@ -46,75 +31,97 @@ os.makedirs(
 )
 async def upload_document(
     file: UploadFile = File(...),
-    current_user: User = Depends(
-        get_current_user
-    ),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    Upload a document, save metadata in PostgreSQL,
+    and ingest it into the RAG/vector pipeline.
+    """
 
-    allowed_extensions = [
-        ".pdf",
-        ".txt",
-        ".docx"
-    ]
+    allowed_extensions = [".pdf", ".txt", ".docx"]
 
-    file_extension = os.path.splitext(
-        file.filename
-    )[1].lower()
+    if not file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file name"
+        )
+
+    file_extension = os.path.splitext(file.filename)[1].lower()
 
     if file_extension not in allowed_extensions:
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only PDF, TXT and DOCX files are allowed"
         )
 
-    unique_filename = (
-        f"{uuid.uuid4()}_{file.filename}"
-    )
-
-    file_path = os.path.join(
-        UPLOAD_DIR,
-        unique_filename
-    )
-
-    with open(
-        file_path,
-        "wb"
-    ) as buffer:
-
-        content = await file.read()
-
-        buffer.write(content)
-
-    document = Document(
-        user_id=current_user.id,
-        file_name=file.filename,
-        file_path=file_path
-    )
-
-    db.add(document)
-
-    db.commit()
-
-    db.refresh(document)
+    unique_filename = f"{uuid.uuid4()}_{file.filename}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
     try:
+        # --------------------------------------------------
+        # 1) Save physical file
+        # --------------------------------------------------
+        content = await file.read()
 
+        with open(file_path, "wb") as buffer:
+            buffer.write(content)
+
+        # --------------------------------------------------
+        # 2) Save document metadata in PostgreSQL
+        # --------------------------------------------------
+        document = Document(
+            user_id=current_user.id,
+            file_name=file.filename,
+            file_path=file_path
+        )
+
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+
+        # --------------------------------------------------
+        # 3) Ingest into vector / RAG system
+        # --------------------------------------------------
         ingest_document(
-        file_path=file_path,
-        document_id=str(document.id),
-        user_id=str(current_user.id),
-        file_name=document.file_name
-    )
+            file_path=file_path,
+            document_id=str(document.id),
+            user_id=str(current_user.id),
+            file_name=document.file_name
+        )
+
+        return document
 
     except Exception as e:
+        db.rollback()
+
+        # If document row was partially saved, clean it up
+        try:
+            existing_document = (
+                db.query(Document)
+                .filter(
+                    Document.file_path == file_path,
+                    Document.user_id == current_user.id
+                )
+                .first()
+            )
+            if existing_document:
+                db.delete(existing_document)
+                db.commit()
+        except Exception:
+            db.rollback()
+
+        # Remove uploaded file if something failed
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
 
         raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail=f"Ingestion failed: {str(e)}"
-    )
-    return document
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Document upload/ingestion failed: {str(e)}"
+        )
 
 
 @router.get(
@@ -122,27 +129,21 @@ async def upload_document(
     response_model=list[DocumentResponse]
 )
 def get_documents(
-    current_user: User = Depends(
-        get_current_user
-    ),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    Get all uploaded documents for the current user.
+    """
 
     documents = (
         db.query(Document)
-        .filter(
-            Document.user_id ==
-            current_user.id
-        )
-        .order_by(
-            Document.uploaded_at.desc()
-        )
+        .filter(Document.user_id == current_user.id)
+        .order_by(Document.uploaded_at.desc())
         .all()
     )
 
     return documents
-
-
 
 
 @router.delete(
@@ -151,11 +152,12 @@ def get_documents(
 )
 def delete_document(
     document_id: str,
-    current_user: User = Depends(
-        get_current_user
-    ),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    Delete a document metadata record.
+    """
 
     document = (
         db.query(Document)
@@ -167,14 +169,19 @@ def delete_document(
     )
 
     if not document:
-
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found"
         )
 
-    db.delete(document)
+    # Delete file from disk if present
+    if document.file_path and os.path.exists(document.file_path):
+        try:
+            os.remove(document.file_path)
+        except Exception:
+            pass
 
+    db.delete(document)
     db.commit()
 
     return

@@ -1,22 +1,19 @@
 "use client";
 
-import HeyGenAvatar from "./HeyGenAvatar";
+import LiveAvatar from "./LiveAvatar";
 
-export default function AvatarContainer() {
+interface AvatarContainerProps {
+  lastAssistantMessage?: string;
+}
 
+export default function AvatarContainer({
+  lastAssistantMessage,
+}: AvatarContainerProps) {
   return (
-
-    <div
-      className="
-        flex
-        justify-center
-        py-4
-      "
-    >
-
-      <HeyGenAvatar />
-
+    <div className="flex justify-center py-4">
+      <LiveAvatar
+        lastAssistantMessage={lastAssistantMessage}
+      />
     </div>
-
   );
 }

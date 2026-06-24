@@ -1,42 +1,24 @@
+import Cookies from "js-cookie";
 import { api } from "@/lib/api";
 
+export interface LiveAvatarSessionResponse {
+  sessionToken: string;
+}
+
 export const liveAvatarService = {
+  async createSession(): Promise<LiveAvatarSessionResponse> {
+    const token = Cookies.get("token");
 
-  async createSession() {
-
-    console.log(
-      "BASE URL:",
-      process.env.NEXT_PUBLIC_API_URL
+    const response = await api.post<LiveAvatarSessionResponse>(
+      "/liveavatar/session",
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
 
-    try {
-
-      const response =
-        await api.post(
-          "/liveavatar/session"
-        );
-
-      return response.data;
-
-    } catch (error: any) {
-
-      console.log(
-        "REQUEST URL:",
-        error.config?.baseURL +
-        error.config?.url
-      );
-
-      console.log(
-        "STATUS:",
-        error.response?.status
-      );
-
-      console.log(
-        "DATA:",
-        error.response?.data
-      );
-
-      throw error;
-    }
-  }
+    return response.data;
+  },
 };
