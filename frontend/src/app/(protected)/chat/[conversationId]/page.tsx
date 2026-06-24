@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import {
+  useEffect,
+  useState
+} from "react";
+
+import {
+  useParams,
+  useRouter
+} from "next/navigation";
 
 import { chatService } from "@/services/chat.service";
 import { Message } from "@/types/chat.types";
@@ -10,6 +17,7 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import ChatInput from "@/components/chat/ChatInput";
 import TypingIndicator from "@/components/chat/TypingIndicator";
 import LiveAvatar from "@/components/avatar/LiveAvatar";
+import DocumentList from "@/components/rag/DocumentList";
 
 interface ChatSendResponse {
   response: string;
@@ -33,25 +41,28 @@ export default function ChatPage() {
 
   // -----------------------------------
   // Latest AGIX assistant reply
-  // This will be passed to LiveAvatar
+  // passed to LiveAvatar
   // -----------------------------------
-  const [lastAssistantMessage, setLastAssistantMessage] =
-    useState("");
+  const [
+    lastAssistantMessage,
+    setLastAssistantMessage
+  ] = useState("");
 
   // -----------------------------------
-  // Graph RAG debug states
+  // Documents panel states
   // -----------------------------------
-  const [retrievedContext, setRetrievedContext] =
-    useState("");
-
-  const [graphContext, setGraphContext] =
-    useState("");
-
-  const [hybridContext, setHybridContext] =
-    useState("");
-
-  const [showDebugPanel, setShowDebugPanel] =
+  const [showDocuments, setShowDocuments] =
     useState(true);
+
+  const [
+    selectedDocumentId,
+    setSelectedDocumentId
+  ] = useState<string | null>(null);
+
+  const [
+    selectedDocumentName,
+    setSelectedDocumentName
+  ] = useState<string | null>(null);
 
   const loadMessages = async () => {
     try {
@@ -92,21 +103,6 @@ export default function ChatPage() {
       // -----------------------------------
       setLastAssistantMessage(
         result.response || ""
-      );
-
-      // -----------------------------------
-      // Save Graph RAG / Vector RAG debug info
-      // -----------------------------------
-      setRetrievedContext(
-        result.retrieved_context || ""
-      );
-
-      setGraphContext(
-        result.graph_context || ""
-      );
-
-      setHybridContext(
-        result.hybrid_context || ""
       );
 
       await loadMessages();
@@ -176,8 +172,8 @@ export default function ChatPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() =>
-                setShowDebugPanel(
-                  !showDebugPanel
+                setShowDocuments(
+                  !showDocuments
                 )
               }
               className="
@@ -194,9 +190,9 @@ export default function ChatPage() {
                 font-medium
               "
             >
-              {showDebugPanel
-                ? "Hide Graph RAG"
-                : "Show Graph RAG"}
+              {showDocuments
+                ? "Hide Documents"
+                : "Show Documents"}
             </button>
 
             <div className="flex items-center gap-2">
@@ -210,7 +206,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Main Chat + Graph RAG Layout */}
+      {/* Main Chat Layout */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full max-w-[1600px] mx-auto px-6 py-6 flex gap-6">
           {/* Left Chat Section */}
@@ -349,8 +345,8 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Right Debug Panel */}
-          {showDebugPanel && (
+          {/* Right Documents Panel */}
+          {showDocuments && (
             <div
               className="
                 w-[420px]
@@ -367,66 +363,34 @@ export default function ChatPage() {
             >
               <div className="px-6 py-5 border-b border-[#ECEAF4]">
                 <h2 className="text-xl font-bold text-slate-900">
-                  Graph RAG Debug Panel
+                  Shared Documents
                 </h2>
 
                 <p className="text-sm text-slate-500 mt-1">
-                  Inspect vector RAG, graph RAG and hybrid retrieval context
+                  Inspect documents uploaded by the user
                 </p>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-5 space-y-5">
-                {/* Vector RAG */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <h3 className="text-sm font-semibold text-slate-900 mb-2">
-                    Vector / Document RAG Context
-                  </h3>
+              <div className="flex-1 overflow-y-auto p-5">
+                <DocumentList
+                  selectedDocumentId={selectedDocumentId}
+                  onSelect={(id, name) => {
+                    setSelectedDocumentId(id);
+                    setSelectedDocumentName(name);
+                  }}
+                />
 
-                  <div className="text-sm text-slate-700 whitespace-pre-wrap break-words max-h-[220px] overflow-y-auto">
-                    {retrievedContext
-                      ? retrievedContext
-                      : "No vector/document RAG context available yet."}
+                {selectedDocumentName && (
+                  <div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50 p-4">
+                    <h3 className="text-sm font-semibold text-violet-900 mb-2">
+                      Selected Document
+                    </h3>
+
+                    <p className="text-sm text-violet-800 break-words">
+                      {selectedDocumentName}
+                    </p>
                   </div>
-                </div>
-
-                {/* Graph RAG */}
-                <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
-                  <h3 className="text-sm font-semibold text-violet-900 mb-2">
-                    Graph RAG Context
-                  </h3>
-
-                  <div className="text-sm text-violet-800 whitespace-pre-wrap break-words max-h-[220px] overflow-y-auto">
-                    {graphContext
-                      ? graphContext
-                      : "No graph RAG context available yet."}
-                  </div>
-                </div>
-
-                {/* Hybrid Context */}
-                <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
-                  <h3 className="text-sm font-semibold text-cyan-900 mb-2">
-                    Hybrid Context
-                  </h3>
-
-                  <div className="text-sm text-cyan-800 whitespace-pre-wrap break-words max-h-[260px] overflow-y-auto">
-                    {hybridContext
-                      ? hybridContext
-                      : "No hybrid retrieval context available yet."}
-                  </div>
-                </div>
-
-                {/* Latest Assistant Response */}
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                  <h3 className="text-sm font-semibold text-emerald-900 mb-2">
-                    Latest AGIX Assistant Response
-                  </h3>
-
-                  <div className="text-sm text-emerald-800 whitespace-pre-wrap break-words max-h-[220px] overflow-y-auto">
-                    {lastAssistantMessage
-                      ? lastAssistantMessage
-                      : "No assistant response yet."}
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           )}

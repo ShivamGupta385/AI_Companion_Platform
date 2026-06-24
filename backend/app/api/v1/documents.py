@@ -16,6 +16,9 @@ from backend.app.models.user import User
 from backend.app.models.document import Document
 from backend.app.schemas.document_schema import DocumentResponse
 from backend.app.services.ingestion_service import ingest_document
+from backend.app.services.graph_extraction_service import (
+    GraphExtractionService
+)
 from backend.app.core.security import get_current_user
 
 router = APIRouter()
@@ -36,7 +39,7 @@ async def upload_document(
 ):
     """
     Upload a document, save metadata in PostgreSQL,
-    and ingest it into the RAG/vector pipeline.
+    ingest it into vector RAG, and extract Graph RAG knowledge.
     """
 
     allowed_extensions = [".pdf", ".txt", ".docx"]
@@ -68,7 +71,7 @@ async def upload_document(
             buffer.write(content)
 
         # --------------------------------------------------
-        # 2) Save document metadata in PostgreSQL
+        # 2) Create document row (DO NOT COMMIT YET)
         # --------------------------------------------------
         document = Document(
             user_id=current_user.id,
@@ -77,41 +80,82 @@ async def upload_document(
         )
 
         db.add(document)
-        db.commit()
+        db.flush()       # get document.id without commit
         db.refresh(document)
 
+        print("=" * 60)
+        print("[DOCUMENT UPLOAD]")
+        print("DOCUMENT ID:", document.id)
+        print("FILE NAME:", document.file_name)
+        print("USER ID:", current_user.id)
+        print("FILE PATH:", file_path)
+        print("=" * 60)
+
         # --------------------------------------------------
-        # 3) Ingest into vector / RAG system
+        # 3) Vector ingestion
         # --------------------------------------------------
-        ingest_document(
+        ingestion_result = ingest_document(
             file_path=file_path,
             document_id=str(document.id),
             user_id=str(current_user.id),
             file_name=document.file_name
         )
 
+        chunk_count = ingestion_result.get("chunk_count", 0)
+        full_text = ingestion_result.get("full_text", "")
+
+        print("=" * 60)
+        print("[VECTOR INGESTION RESULT]")
+        print("CHUNK COUNT:", chunk_count)
+        print("FULL TEXT LENGTH:", len(full_text))
+        print("=" * 60)
+
+        # --------------------------------------------------
+        # 4) Graph extraction (non-blocking enhancement)
+        # --------------------------------------------------
+        if full_text and full_text.strip():
+            try:
+                graph_text = full_text[:12000]
+
+                graph_payload = GraphExtractionService.extract_and_store_graph(
+                    db=db,
+                    user_id=current_user.id,
+                    text=graph_text,
+                    source_document_id=document.id
+                )
+
+                print("=" * 60)
+                print("[GRAPH EXTRACTION COMPLETE]")
+                print("NODES EXTRACTED:", len(graph_payload.nodes))
+                print("EDGES EXTRACTED:", len(graph_payload.edges))
+                print("=" * 60)
+
+            except Exception as graph_error:
+                print("=" * 60)
+                print("[GRAPH EXTRACTION ERROR]")
+                print(str(graph_error))
+                print("Document upload + vector ingestion succeeded.")
+                print("Skipping graph extraction failure.")
+                print("=" * 60)
+        else:
+            print("[GRAPH EXTRACTION] Skipped because full_text is empty")
+
+        # --------------------------------------------------
+        # 5) Commit final transaction once
+        # --------------------------------------------------
+        db.commit()
+        db.refresh(document)
+
         return document
 
     except Exception as e:
         db.rollback()
 
-        # If document row was partially saved, clean it up
-        try:
-            existing_document = (
-                db.query(Document)
-                .filter(
-                    Document.file_path == file_path,
-                    Document.user_id == current_user.id
-                )
-                .first()
-            )
-            if existing_document:
-                db.delete(existing_document)
-                db.commit()
-        except Exception:
-            db.rollback()
+        print("=" * 60)
+        print("[DOCUMENT UPLOAD ERROR]")
+        print(str(e))
+        print("=" * 60)
 
-        # Remove uploaded file if something failed
         if os.path.exists(file_path):
             try:
                 os.remove(file_path)
@@ -132,10 +176,6 @@ def get_documents(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Get all uploaded documents for the current user.
-    """
-
     documents = (
         db.query(Document)
         .filter(Document.user_id == current_user.id)
@@ -155,10 +195,6 @@ def delete_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Delete a document metadata record.
-    """
-
     document = (
         db.query(Document)
         .filter(
@@ -174,7 +210,6 @@ def delete_document(
             detail="Document not found"
         )
 
-    # Delete file from disk if present
     if document.file_path and os.path.exists(document.file_path):
         try:
             os.remove(document.file_path)

@@ -1,229 +1,118 @@
 "use client";
 
-import {
-  useEffect,
-  useState
-} from "react";
-
+import { useEffect, useState } from "react";
 import {
   documentService,
-  Document
+  Document,
 } from "@/services/document.service";
 
 interface Props {
-
-  selectedDocumentId:
-    string | null;
-
-  onSelect: (
-    id: string,
-    name: string
-  ) => void;
-
+  selectedDocumentId: string | null;
+  onSelect: (id: string, name: string) => void;
 }
 
 export default function DocumentList({
   selectedDocumentId,
-  onSelect
+  onSelect,
 }: Props) {
-
-  const [
-    documents,
-    setDocuments
-  ] = useState<Document[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadDocuments = async () => {
+      try {
+        const data = await documentService.getDocuments();
 
-    const loadDocuments =
-      async () => {
-
-        try {
-
-          const data =
-            await documentService.getDocuments();
-
-          console.log(
-            "DOCUMENTS RECEIVED:",
-            data
-          );
-
-          setDocuments(data);
-
-        } catch (error: any) {
-
-          console.error(
-            "DOCUMENT FETCH ERROR:",
-            error
-          );
-
-          console.log(
-            "STATUS:",
-            error.response?.status
-          );
-
-          console.log(
-            "DATA:",
-            error.response?.data
-          );
-
-        } finally {
-
-          setLoading(false);
-        }
-      };
+        console.log("DOCUMENTS RECEIVED:", data);
+        setDocuments(data);
+      } catch (error: any) {
+        console.error("DOCUMENT FETCH ERROR:", error);
+        console.log("STATUS:", error.response?.status);
+        console.log("DATA:", error.response?.data);
+      } finally {
+        setLoading(false);
+      }
+    };
 
     loadDocuments();
-
   }, []);
 
   if (loading) {
-
     return (
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-slate-500">
         Loading documents...
       </p>
     );
   }
 
   return (
-
     <div>
-
-      <h3
-        className="
-          font-semibold
-          text-lg
-          mb-3
-          mt-6
-        "
-      >
+      <h3 className="mb-4 text-lg font-semibold text-slate-900">
         Uploaded Documents
       </h3>
 
-      <div className="space-y-2">
-
+      <div className="space-y-3">
         {documents.length === 0 ? (
-
-          <p className="text-sm text-gray-500">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
             No documents uploaded
-          </p>
-
+          </div>
         ) : (
+          documents.map((document) => (
+            <div
+              key={document.id}
+              onClick={() =>
+                onSelect(document.id, document.file_name)
+              }
+              className={`flex cursor-pointer items-center justify-between rounded-2xl border p-3 text-sm transition ${
+                selectedDocumentId === document.id
+                  ? "border-violet-500 bg-violet-50"
+                  : "border-slate-200 bg-slate-50 hover:bg-slate-100"
+              }`}
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <span className="text-base">📄</span>
 
-          documents.map(
-  (document) => (
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-slate-800">
+                    {document.file_name}
+                  </p>
+                </div>
+              </div>
 
-    <div
-      key={document.id}
-      onClick={() =>
-        onSelect(
-          document.id,
-          document.file_name
-        )
-      }
-      className={`
-        flex
-        items-center
-        justify-between
-        p-3
-        border
-        rounded-xl
-        cursor-pointer
-        transition
-        text-sm
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
 
-        ${
-          selectedDocumentId ===
-          document.id
-            ? "bg-blue-100 border-blue-500"
-            : "bg-gray-50 hover:bg-gray-100"
-        }
-      `}
-    >
+                  const confirmed = window.confirm(
+                    `Delete ${document.file_name}?`
+                  );
 
-      <div
-        className="
-          flex
-          items-center
-          gap-2
-          flex-1
-          overflow-hidden
-        "
-      >
+                  if (!confirmed) return;
 
-        <span>📄</span>
+                  try {
+                    await documentService.deleteDocument(
+                      document.id
+                    );
 
-        <span
-          className="
-            truncate
-          "
-        >
-          {document.file_name}
-        </span>
-
-      </div>
-
-      <button
-        onClick={async (e) => {
-
-          e.stopPropagation();
-
-          const confirmed =
-            window.confirm(
-              `Delete ${document.file_name}?`
-            );
-
-          if (!confirmed) {
-            return;
-          }
-
-          try {
-
-            await documentService.deleteDocument(
-              document.id
-            );
-
-            setDocuments(
-              documents.filter(
-                (doc) =>
-                  doc.id !== document.id
-              )
-            );
-
-          } catch (error) {
-
-            console.error(error);
-
-            alert(
-              "Failed to delete document"
-            );
-
-          }
-
-        }}
-        className="
-          ml-2
-          text-red-500
-          hover:text-red-700
-          text-lg
-        "
-      >
-        🗑️
-      </button>
-
-    </div>
-
-  )
-)
-
+                    setDocuments((prev) =>
+                      prev.filter(
+                        (doc) => doc.id !== document.id
+                      )
+                    );
+                  } catch (error) {
+                    console.error(error);
+                    alert("Failed to delete document");
+                  }
+                }}
+                className="ml-3 text-lg text-red-500 transition hover:text-red-700"
+                title="Delete document"
+              >
+                🗑️
+              </button>
+            </div>
+          ))
         )}
-
       </div>
-
     </div>
-
   );
 }
