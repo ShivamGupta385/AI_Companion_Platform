@@ -6,15 +6,20 @@ from backend.app.core.config import settings
 
 def create_avatar_session() -> Dict[str, Any]:
     """
-    Create a LiveAvatar session token for frontend SDK usage.
+    Create a LiveAvatar Sandbox session token.
     """
 
     url = "https://api.liveavatar.com/v1/sessions/token"
 
     payload = {
-        "avatar_id": settings.LIVEAVATAR_AVATAR_ID,
         "mode": "FULL",
-        "is_sandbox": False,
+
+        # Sandbox mode
+        "is_sandbox": True,
+
+        # Sandbox avatar (Wayne)
+        "avatar_id": "dd73ea75-1218-4ef3-92ce-606d5f7fbc0a",
+
         "avatar_persona": {
             "language": "en"
         }
@@ -33,19 +38,16 @@ def create_avatar_session() -> Dict[str, Any]:
             timeout=30
         )
 
+        print("\n" + "=" * 60)
+        print("LIVEAVATAR SANDBOX")
         print("=" * 60)
-        print("[LIVEAVATAR TOKEN] URL:", url)
-        print("[LIVEAVATAR TOKEN] AVATAR ID:", settings.LIVEAVATAR_AVATAR_ID)
-        print("[LIVEAVATAR TOKEN] PAYLOAD:", payload)
-        print("[LIVEAVATAR TOKEN] STATUS:", response.status_code)
-        print("[LIVEAVATAR TOKEN] RESPONSE:", response.text)
-        print("=" * 60)
+        print("URL:", url)
+        print("Payload:", payload)
+        print("Status Code:", response.status_code)
+        print("Response:", response.text)
+        print("=" * 60 + "\n")
 
-        if response.status_code >= 400:
-            raise Exception(
-                f"LiveAvatar session creation failed: "
-                f"{response.status_code} - {response.text}"
-            )
+        response.raise_for_status()
 
         return response.json()
 

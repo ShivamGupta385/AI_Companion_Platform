@@ -34,3 +34,21 @@ dist/
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Node.js / Frontend (Crucial for keeping file size down)
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+
+# Frontend Build Folders (If using Next.js or React)
+.next/
+out/
+build/
+
+# Python Type Checking (Common in modern FastAPI projects)
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter Notebooks (If you ever test AI models locally)
+.ipynb_checkpoints

@@ -27,20 +27,13 @@ export default function MessageBubble({
   onSpeakStart,
   onSpeakEnd,
 }: MessageBubbleProps) {
-  const isUser =
-    senderType === "user";
+  const isUser = senderType === "user";
 
-  const [isLoadingAudio, setIsLoadingAudio] =
-    useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
-  const [isPlayingAudio, setIsPlayingAudio] =
-    useState(false);
-
-  const audioRef =
-    useRef<HTMLAudioElement | null>(null);
-
-  const audioUrlRef =
-    useRef<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
 
   const cleanupAudio = () => {
     if (audioRef.current) {
@@ -52,9 +45,7 @@ export default function MessageBubble({
     }
 
     if (audioUrlRef.current) {
-      URL.revokeObjectURL(
-        audioUrlRef.current
-      );
+      URL.revokeObjectURL(audioUrlRef.current);
       audioUrlRef.current = null;
     }
 
@@ -80,16 +71,20 @@ export default function MessageBubble({
     try {
       setIsLoadingAudio(true);
 
-      const blob =
-        await ttsService.speak(message);
+      const blob = await ttsService.speak(message);
 
-      const url =
-        URL.createObjectURL(blob);
+      // 👇 ADDED: Safety check for null blob (LiveAvatar handles audio) 👇
+      if (!blob) {
+        console.log("No audio blob returned (Avatar is handling speech).");
+        setIsLoadingAudio(false);
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
 
       audioUrlRef.current = url;
 
-      const audio =
-        new Audio(url);
+      const audio = new Audio(url);
 
       audioRef.current = audio;
 
@@ -104,18 +99,13 @@ export default function MessageBubble({
       };
 
       audio.onerror = () => {
-        console.error(
-          "Audio playback failed"
-        );
+        console.error("Audio playback failed");
         cleanupAudio();
       };
 
       await audio.play();
     } catch (error) {
-      console.error(
-        "TTS Error:",
-        error
-      );
+      console.error("TTS Error:", error);
       cleanupAudio();
     }
   };
@@ -129,9 +119,7 @@ export default function MessageBubble({
   return (
     <div
       className={`flex ${
-        isUser
-          ? "justify-end"
-          : "justify-start"
+        isUser ? "justify-end" : "justify-start"
       }`}
     >
       <div
