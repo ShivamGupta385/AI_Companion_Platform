@@ -52,3 +52,7 @@ build/
 
 # Jupyter Notebooks (If you ever test AI models locally)
 .ipynb_checkpoints
+
+# User Uploads & Media
+uploads/
+*.pdf
