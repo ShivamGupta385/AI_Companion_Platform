@@ -23,6 +23,65 @@ class LongTermMemoryService:
     6. Extract and store useful long-term memories
     """
 
+    # ---------------------------------------------------------
+    # Text sanitization helpers
+    # ---------------------------------------------------------
+    @staticmethod
+    def clean_text(value: str | None) -> str:
+        """
+        Remove null bytes and unsafe control characters from text
+        before sending to LLM, saving in DB, or storing in checkpoints.
+
+        Keeps:
+        - normal printable characters
+        - newline
+        - tab
+        - carriage return
+        """
+        if not value:
+            return ""
+
+        cleaned_chars = []
+        for ch in str(value):
+            code = ord(ch)
+
+            # Remove NULL byte explicitly
+            if code == 0:
+                continue
+
+            # Keep newline / tab / carriage return
+            if ch in ("\n", "\t", "\r"):
+                cleaned_chars.append(ch)
+                continue
+
+            # Remove other ASCII control chars
+            if code < 32:
+                continue
+
+            cleaned_chars.append(ch)
+
+        cleaned = "".join(cleaned_chars)
+
+        # UTF-8 roundtrip to strip weird invalid sequences
+        cleaned = (
+            cleaned.encode("utf-8", errors="ignore")
+            .decode("utf-8", errors="ignore")
+            .strip()
+        )
+
+        return cleaned
+
+    @staticmethod
+    def normalize_memory_text(value: str | None) -> str:
+        """
+        Normalize memory text for dedupe checks.
+        """
+        text = LongTermMemoryService.clean_text(value)
+        return " ".join(text.split()).strip().lower()
+
+    # ---------------------------------------------------------
+    # Read APIs
+    # ---------------------------------------------------------
     @staticmethod
     def get_user_memories(
         db: Session,
@@ -36,6 +95,15 @@ class LongTermMemoryService:
             .order_by(desc(UserMemory.updated_at))
         )
 
+        # If companion-specific memory is requested, return:
+        # - memories tied to that companion
+        # - global memories (companion_id is null)
+        if companion_id:
+            query = query.filter(
+                (UserMemory.companion_id == companion_id) |
+                (UserMemory.companion_id.is_(None))
+            )
+
         return query.limit(limit).all()
 
     @staticmethod
@@ -45,8 +113,9 @@ class LongTermMemoryService:
         companion_id: Optional[UUID] = None,
         limit: int = 5
     ) -> List[ConversationSummary]:
-        query = db.query(ConversationSummary).filter(
-            ConversationSummary.user_id == user_id
+        query = (
+            db.query(ConversationSummary)
+            .filter(ConversationSummary.user_id == user_id)
         )
 
         if companion_id:
@@ -58,6 +127,9 @@ class LongTermMemoryService:
 
         return query.limit(limit).all()
 
+    # ---------------------------------------------------------
+    # Write APIs
+    # ---------------------------------------------------------
     @staticmethod
     def save_user_memory(
         db: Session,
@@ -67,6 +139,8 @@ class LongTermMemoryService:
         companion_id: Optional[UUID] = None,
         source_conversation_id: Optional[UUID] = None
     ) -> UserMemory:
+        memory_text = LongTermMemoryService.clean_text(memory_text)
+
         memory = UserMemory(
             user_id=user_id,
             companion_id=companion_id,
@@ -80,6 +154,9 @@ class LongTermMemoryService:
 
         return memory
 
+    # ---------------------------------------------------------
+    # Transcript builder
+    # ---------------------------------------------------------
     @staticmethod
     def build_conversation_text(
         db: Session,
@@ -94,14 +171,25 @@ class LongTermMemoryService:
             .all()
         )
 
-        lines = []
+        lines: List[str] = []
 
         for msg in messages:
             speaker = "User" if msg.sender_type == "user" else "Assistant"
-            lines.append(f"{speaker}: {msg.message_text}")
+            cleaned_text = LongTermMemoryService.clean_text(msg.message_text)
 
-        return "\n".join(lines)
+            if not cleaned_text:
+                continue
 
+            lines.append(f"{speaker}: {cleaned_text}")
+
+        transcript = "\n".join(lines)
+        transcript = LongTermMemoryService.clean_text(transcript)
+
+        return transcript
+
+    # ---------------------------------------------------------
+    # Conversation summary generation
+    # ---------------------------------------------------------
     @staticmethod
     def upsert_conversation_summary(
         db: Session,
@@ -117,6 +205,8 @@ class LongTermMemoryService:
             conversation_id=conversation_id,
             limit=40
         )
+
+        conversation_text = LongTermMemoryService.clean_text(conversation_text)
 
         if not conversation_text.strip():
             return None
@@ -141,7 +231,12 @@ Conversation:
 """
 
         response = llm.invoke(summary_prompt)
-        summary_text = response.content.strip()
+
+        raw_summary = getattr(response, "content", "") or ""
+        summary_text = LongTermMemoryService.clean_text(raw_summary)
+
+        if not summary_text:
+            return None
 
         existing_summary = (
             db.query(ConversationSummary)
@@ -168,6 +263,9 @@ Conversation:
 
         return new_summary
 
+    # ---------------------------------------------------------
+    # Durable memory extraction
+    # ---------------------------------------------------------
     @staticmethod
     def extract_and_store_memories(
         db: Session,
@@ -183,6 +281,8 @@ Conversation:
             conversation_id=conversation_id,
             limit=40
         )
+
+        conversation_text = LongTermMemoryService.clean_text(conversation_text)
 
         if not conversation_text.strip():
             return []
@@ -201,6 +301,8 @@ Keep memories only if they are stable or important, such as:
 - future tasks or commitments
 
 Do NOT include temporary small talk.
+Do NOT include greetings.
+Do NOT include one-time irrelevant facts.
 
 Return each memory as a short bullet point.
 Keep each memory concise and factual.
@@ -210,30 +312,51 @@ Conversation:
 """
 
         response = llm.invoke(extraction_prompt)
-        raw_output = response.content.strip()
+        raw_output = getattr(response, "content", "") or ""
+        raw_output = LongTermMemoryService.clean_text(raw_output)
+
+        if not raw_output:
+            return []
 
         stored_memories: List[UserMemory] = []
 
-        for line in raw_output.split("\n"):
-            memory_text = line.strip()
+        # Load existing normalized memories for this user
+        existing_memories = (
+            db.query(UserMemory)
+            .filter(UserMemory.user_id == user_id)
+            .all()
+        )
+
+        existing_normalized = {
+            LongTermMemoryService.normalize_memory_text(m.memory_text)
+            for m in existing_memories
+            if m.memory_text
+        }
+
+        candidate_lines = raw_output.split("\n")
+
+        for line in candidate_lines:
+            memory_text = LongTermMemoryService.clean_text(line)
 
             if memory_text.startswith("-"):
                 memory_text = memory_text[1:].strip()
 
+            memory_text = LongTermMemoryService.clean_text(memory_text)
+
             if not memory_text:
                 continue
 
-            # Avoid exact duplicate memory for same user
-            existing = (
-                db.query(UserMemory)
-                .filter(
-                    UserMemory.user_id == user_id,
-                    UserMemory.memory_text == memory_text
-                )
-                .first()
-            )
+            # Skip very short / junk memories
+            if len(memory_text) < 4:
+                continue
 
-            if existing:
+            normalized = LongTermMemoryService.normalize_memory_text(memory_text)
+
+            if not normalized:
+                continue
+
+            # Deduplicate
+            if normalized in existing_normalized:
                 continue
 
             memory = UserMemory(
@@ -246,6 +369,7 @@ Conversation:
 
             db.add(memory)
             stored_memories.append(memory)
+            existing_normalized.add(normalized)
 
         db.flush()
 

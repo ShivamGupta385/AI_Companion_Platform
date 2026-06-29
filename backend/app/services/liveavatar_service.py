@@ -4,52 +4,75 @@ from typing import Any, Dict
 from backend.app.core.config import settings
 
 
+LIVEAVATAR_SESSION_URL = (
+    "https://api.liveavatar.com/v1/sessions/token"
+)
+
+
 def create_avatar_session() -> Dict[str, Any]:
     """
-    Create a LiveAvatar session token for frontend SDK usage.
+    Create a plain LiveAvatar LITE session.
+
+    Conversation flow:
+
+        User
+            ↓
+        FastAPI
+            ↓
+        LangGraph
+            ↓
+        OpenAI
+            ↓
+        ElevenLabs TTS
+            ↓
+        LiveAvatar
+
+    LiveAvatar is used only for rendering the avatar.
     """
 
-    url = "https://api.liveavatar.com/v1/sessions/token"
-
     payload = {
+        "mode": "LITE",
         "avatar_id": settings.LIVEAVATAR_AVATAR_ID,
-        "mode": "FULL",
         "is_sandbox": False,
-        "avatar_persona": {
-            "language": "en"
-        }
     }
 
     headers = {
         "X-API-KEY": settings.LIVEAVATAR_API_KEY,
-        "Content-Type": "application/json"
+        "Accept": "application/json",
+        "Content-Type": "application/json",
     }
 
     try:
+
         response = requests.post(
-            url,
+            LIVEAVATAR_SESSION_URL,
             headers=headers,
             json=payload,
-            timeout=30
+            timeout=30,
         )
 
-        print("=" * 60)
-        print("[LIVEAVATAR TOKEN] URL:", url)
-        print("[LIVEAVATAR TOKEN] AVATAR ID:", settings.LIVEAVATAR_AVATAR_ID)
-        print("[LIVEAVATAR TOKEN] PAYLOAD:", payload)
-        print("[LIVEAVATAR TOKEN] STATUS:", response.status_code)
-        print("[LIVEAVATAR TOKEN] RESPONSE:", response.text)
-        print("=" * 60)
+        print("=" * 80)
+        print("[LIVEAVATAR SESSION]")
+        print("URL:", LIVEAVATAR_SESSION_URL)
+        print("Payload:", payload)
+        print("Status:", response.status_code)
+        print("Response:", response.text)
+        print("=" * 80)
 
-        if response.status_code >= 400:
-            raise Exception(
-                f"LiveAvatar session creation failed: "
-                f"{response.status_code} - {response.text}"
-            )
+        response.raise_for_status()
 
         return response.json()
 
+    except requests.HTTPError as e:
+
+        raise Exception(
+            "LiveAvatar session creation failed.\n"
+            f"Status Code: {response.status_code}\n"
+            f"Response: {response.text}"
+        ) from e
+
     except requests.RequestException as e:
+
         raise Exception(
             f"LiveAvatar request failed: {str(e)}"
-        )
+        ) from e

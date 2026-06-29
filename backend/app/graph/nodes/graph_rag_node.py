@@ -4,6 +4,7 @@ from backend.app.db.session import SessionLocal
 from backend.app.services.graph_retriever_service import (
     GraphRetrieverService
 )
+from backend.app.utils.text_cleaner import clean_text
 
 
 MEMORY_QUERY_KEYWORDS = [
@@ -27,7 +28,10 @@ MEMORY_QUERY_KEYWORDS = [
 
 def is_memory_query(query: str) -> bool:
     query_lower = query.lower().strip()
-    return any(keyword in query_lower for keyword in MEMORY_QUERY_KEYWORDS)
+    return any(
+        keyword in query_lower
+        for keyword in MEMORY_QUERY_KEYWORDS
+    )
 
 
 def graph_rag_node(state):
@@ -46,8 +50,10 @@ def graph_rag_node(state):
 
     try:
         user_id = state.get("user_id")
-        query = state.get("user_message", "")
-        retrieved_context = state.get("retrieved_context", "")
+        query = clean_text(state.get("user_message", ""))
+        retrieved_context = clean_text(
+            state.get("retrieved_context", "")
+        )
 
         if not user_id or not query:
             print("[GRAPH RAG NODE] Missing user_id or query")
@@ -89,9 +95,11 @@ def graph_rag_node(state):
             edge_limit=20
         )
 
-        graph_context = graph_result.get("graph_context", "")
-        graph_nodes = graph_result.get("graph_nodes", [])
-        graph_edges = graph_result.get("graph_edges", [])
+        raw_graph_context = graph_result.get("graph_context", "")
+        graph_nodes = graph_result.get("graph_nodes", []) or []
+        graph_edges = graph_result.get("graph_edges", []) or []
+
+        graph_context = clean_text(raw_graph_context)
 
         # ---------------------------------------------------------
         # Build hybrid context
@@ -108,7 +116,9 @@ def graph_rag_node(state):
                 f"GRAPH RAG CONTEXT:\n{graph_context}"
             )
 
-        hybrid_context = "\n\n".join(hybrid_parts).strip()
+        hybrid_context = clean_text(
+            "\n\n".join(hybrid_parts).strip()
+        )
 
         print("=" * 60)
         print("[GRAPH RAG NODE]")
@@ -140,7 +150,9 @@ def graph_rag_node(state):
             "graph_context": "",
             "graph_nodes": [],
             "graph_edges": [],
-            "hybrid_context": state.get("retrieved_context", "")
+            "hybrid_context": clean_text(
+                state.get("retrieved_context", "")
+            )
         }
 
     finally:

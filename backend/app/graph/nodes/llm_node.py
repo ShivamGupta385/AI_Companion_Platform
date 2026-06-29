@@ -1,4 +1,8 @@
 from backend.app.services.llm_provider import llm
+from backend.app.utils.text_cleaner import (
+    clean_text,
+    clean_string_list
+)
 
 
 MEMORY_QUERY_KEYWORDS = [
@@ -55,47 +59,55 @@ def is_document_query(query: str) -> bool:
 
 
 def llm_node(state):
-    user_message = state["user_message"]
+    user_message = clean_text(state["user_message"])
 
     # --------------------------------------------------
     # 1) SHORT-TERM MEMORY (same conversation thread)
     # --------------------------------------------------
-    memory = state.get("memory", [])
-    history = state.get("history", [])
+    raw_memory = state.get("memory", []) or []
+    raw_history = state.get("history", []) or []
+
+    memory = [
+        (role, clean_text(text))
+        for role, text in raw_memory
+    ]
+
+    history = [
+        (role, clean_text(text))
+        for role, text in raw_history
+    ]
 
     # --------------------------------------------------
     # 2) LONG-TERM MEMORY (cross-conversation)
     # --------------------------------------------------
-    long_term_memories = state.get(
-        "long_term_memories",
-        []
+    long_term_memories = clean_string_list(
+        state.get("long_term_memories", [])
     )
-    conversation_summaries = state.get(
-        "conversation_summaries",
-        []
+
+    conversation_summaries = clean_string_list(
+        state.get("conversation_summaries", [])
     )
 
     # --------------------------------------------------
     # 3) DOCUMENT RAG
     # --------------------------------------------------
-    documents = state.get("document_names", [])
-    latest_document_name = state.get(
-        "latest_document_name"
+    documents = clean_string_list(
+        state.get("document_names", [])
     )
-    latest_document_id = state.get(
-        "latest_document_id"
+
+    latest_document_name = clean_text(
+        state.get("latest_document_name")
     )
-    retrieved_context = state.get(
-        "retrieved_context",
-        ""
+    latest_document_id = state.get("latest_document_id")
+    retrieved_context = clean_text(
+        state.get("retrieved_context", "")
     )
 
     # --------------------------------------------------
     # 4) GRAPH RAG
     # --------------------------------------------------
-    graph_context = state.get(
-        "graph_context",
-        ""
+    graph_context = clean_text(
+        state.get("graph_context", "")
     )
 
     # --------------------------------------------------
@@ -104,8 +116,6 @@ def llm_node(state):
     memory_query = is_memory_query(user_message)
     document_query = is_document_query(user_message)
 
-    # If memory only contains current user message,
-    # do not pretend earlier thread context exists.
     has_meaningful_thread_memory = len(memory) >= 2
 
     thread_memory_status = (
@@ -135,9 +145,6 @@ def llm_node(state):
     # --------------------------------------------------
     # 6) HARD GUARDRAILS FOR DOCUMENT QUERIES
     # --------------------------------------------------
-    # Case A:
-    # User is asking about attached/uploaded document
-    # but user has no uploaded docs at all
     if document_query and not has_any_document:
         return {
             **state,
@@ -147,15 +154,11 @@ def llm_node(state):
             )
         }
 
-    # Case B:
-    # Latest document exists but retrieval returned nothing.
-    # This usually means the file was uploaded but text extraction failed,
-    # or the PDF is scanned / image-based / empty.
     if document_query and has_latest_document and not has_retrieved_context:
         return {
             **state,
             "response": (
-                f"I found your latest uploaded document **{latest_document_name}**, "
+                f"I found your latest uploaded document {latest_document_name}, "
                 f"but I couldn't extract meaningful text from it for summarization. "
                 f"This usually happens when the PDF is image-based, scanned, or contains little/no selectable text. "
                 f"If you want, I can help you improve the ingestion pipeline with OCR fallback so these files can also be summarized."
@@ -165,7 +168,7 @@ def llm_node(state):
     # --------------------------------------------------
     # 7) SYSTEM PROMPT
     # --------------------------------------------------
-    system_prompt = f"""
+    system_prompt = clean_text(f"""
 {state.get('system_prompt', '')}
 
 USER PROFILE:
@@ -303,27 +306,19 @@ IMPORTANT INSTRUCTIONS:
 
 27. When answering from document context, mention the document name naturally if available.
 """
-
+)
     # --------------------------------------------------
     # 8) BUILD FINAL MESSAGE LIST
     # --------------------------------------------------
     messages = [("system", system_prompt)]
 
-    # Add short-term thread memory
     if memory:
         messages.extend(memory)
 
-    # Add optional history
     if history:
         messages.extend(history)
 
-    # Add current user message
-    messages.append(
-        (
-            "human",
-            user_message
-        )
-    )
+    messages.append(("human", user_message))
 
     # --------------------------------------------------
     # 9) DEBUG LOGS
@@ -350,10 +345,12 @@ IMPORTANT INSTRUCTIONS:
     # --------------------------------------------------
     response = llm.invoke(messages)
 
+    response_text = clean_text(response.content)
+
     print("[LLM NODE RESPONSE]")
-    print(response.content)
+    print(response_text)
 
     return {
         **state,
-        "response": response.content
+        "response": response_text
     }

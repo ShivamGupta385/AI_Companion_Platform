@@ -5,12 +5,11 @@ from sqlalchemy import (
     DateTime,
     ForeignKey
 )
-
 from sqlalchemy.orm import (
     Mapped,
-    mapped_column
+    mapped_column,
+    relationship
 )
-
 from sqlalchemy.sql import func
 
 from backend.app.db.base import Base
@@ -28,6 +27,11 @@ class Document(Base):
         ForeignKey("users.id")
     )
 
+    companion_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("companions.id"),
+        nullable=True
+    )
+
     file_name: Mapped[str] = mapped_column(
         String(255)
     )
@@ -40,3 +44,5 @@ class Document(Base):
         DateTime(timezone=True),
         server_default=func.now()
     )
+
+    companion = relationship("Companion")

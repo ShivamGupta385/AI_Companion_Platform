@@ -269,9 +269,27 @@ export default function LiveAvatar({
             }
           );
 
+
+        console.log("SESSION INSTANCE:", session);
+
+        console.log(
+            "PROTOTYPE METHODS:",
+            Object.getOwnPropertyNames(
+                Object.getPrototypeOf(session)
+            )
+        );
+
         sessionRef.current = session;
 
         await session.start();
+        console.log("================================");
+        console.log("LIVEAVATAR SESSION METHODS");
+        console.log(
+          Object.getOwnPropertyNames(
+            Object.getPrototypeOf(session)
+          )
+        );
+        console.log("================================");
 
         console.log(
           "✅ LiveAvatar session started"
@@ -426,22 +444,9 @@ export default function LiveAvatar({
   // ------------------------------------------------------
   // Future lip-sync / speech hook
   // ------------------------------------------------------
-  useEffect(() => {
-    if (
-      sessionStarted &&
-      lastAssistantMessage
-    ) {
-      console.log(
-        "[LIVEAVATAR] Latest AGIX response:",
-        lastAssistantMessage
-      );
-
-      // FUTURE:
-      // if LiveAvatar SDK supports speech injection,
-      // trigger it here for lip sync.
-    }
-  }, [lastAssistantMessage, sessionStarted]);
-
+  // ------------------------------------------------------
+// Avatar Speech + Lip Sync
+// -----------------------------------------------------
   return (
     <div className="w-full rounded-3xl border border-[#ECEAF4] bg-white p-4 shadow-sm">
       <div

@@ -9,7 +9,6 @@ import {
   Bot,
   MessageCircle,
   Radio,
-  LogOut,
 } from "lucide-react";
 
 import { useAuthStore } from "@/store/auth-store";
@@ -17,20 +16,11 @@ import { useAuthStore } from "@/store/auth-store";
 export default function DashboardPage() {
   const router = useRouter();
 
-  const {
-    logout,
-    user,
-    fetchCurrentUser,
-  } = useAuthStore();
+  const { user, fetchCurrentUser } = useAuthStore();
 
   useEffect(() => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
-
-  const handleLogout = () => {
-    logout();
-    router.replace("/login");
-  };
 
   const displayName =
     user?.full_name ||
@@ -39,16 +29,16 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F7FF]">
-      <main className="max-w-7xl mx-auto px-8 py-6">
+      <main className="mx-auto max-w-7xl px-6 py-6 lg:px-8">
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-8 flex items-center justify-between">
           {/* Logo */}
           <div className="relative">
             <h1 className="text-5xl font-black tracking-tight text-black">
               AGIX
             </h1>
 
-            <div className="absolute -top-2 right-2 text-violet-500 text-xl">
+            <div className="absolute -right-2 -top-2 text-xl text-violet-500">
               ✦
             </div>
           </div>
@@ -57,14 +47,14 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
             <button
               className="
+                flex
                 h-14
                 w-14
+                items-center
+                justify-center
                 rounded-full
                 bg-white
                 shadow-sm
-                flex
-                items-center
-                justify-center
               "
             >
               <Bell size={20} />
@@ -87,10 +77,10 @@ export default function DashboardPage() {
                 alt="user"
                 width={42}
                 height={42}
-                className="rounded-full"
+                className="rounded-full object-cover"
               />
 
-              <span className="font-medium">
+              <span className="font-medium text-slate-800">
                 {displayName}
               </span>
             </div>
@@ -98,7 +88,8 @@ export default function DashboardPage() {
         </div>
 
         {/* HERO SECTION */}
-        <div className="grid lg:grid-cols-2 gap-8 items-center">
+        <div className="grid items-center gap-10 lg:grid-cols-2">
+          {/* Left Content */}
           <div>
             <div
               className="
@@ -111,64 +102,54 @@ export default function DashboardPage() {
                 bg-white
                 px-5
                 py-2
-                text-violet-600
                 font-medium
+                text-violet-600
+                shadow-sm
               "
             >
               ✨ AGIX AI Companion Platform
             </div>
 
-            <h1
-              className="
-                mt-6
-                text-6xl
-                font-bold
-                text-slate-900
-              "
-            >
+            <h1 className="mt-6 text-5xl font-bold leading-tight text-slate-900 lg:text-6xl">
               Welcome Back 👋
             </h1>
 
-            <p
-              className="
-                mt-4
-                max-w-xl
-                text-xl
-                text-slate-500
-              "
-            >
-              Manage your onboarding profile,
-              AI companions and conversations
-              from one intelligent dashboard.
+            <p className="mt-4 max-w-xl text-lg leading-8 text-slate-500 lg:text-xl">
+              Manage your onboarding profile, AI companions,
+              shared documents, and conversations from one
+              intelligent dashboard.
             </p>
           </div>
 
-          <div className="flex justify-center">
-            <Image
-              src="/dashboard/main.png"
-              alt="hero"
-              width={650}
-              height={350}
-              className="object-contain"
-              priority
-            />
+          {/* Right Hero Image */}
+          <div className="flex justify-center lg:justify-end">
+            <div className="relative w-full max-w-[560px]">
+              <Image
+                src="/dashboard/main.png"
+                alt="hero"
+                width={560}
+                height={360}
+                priority
+                className="h-auto w-full object-contain"
+              />
+            </div>
           </div>
         </div>
 
         {/* STATS */}
-        <div className="grid md:grid-cols-3 gap-5 mt-8">
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
           {/* AI Companions */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm">
+          <div className="rounded-3xl bg-white p-6 shadow-sm transition hover:shadow-md">
             <div className="flex items-center gap-4">
               <div
                 className="
+                  flex
                   h-14
                   w-14
-                  rounded-full
-                  bg-violet-100
-                  flex
                   items-center
                   justify-center
+                  rounded-full
+                  bg-violet-100
                 "
               >
                 <Bot className="text-violet-600" />
@@ -187,17 +168,17 @@ export default function DashboardPage() {
           </div>
 
           {/* Conversations */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm">
+          <div className="rounded-3xl bg-white p-6 shadow-sm transition hover:shadow-md">
             <div className="flex items-center gap-4">
               <div
                 className="
+                  flex
                   h-14
                   w-14
-                  rounded-full
-                  bg-cyan-100
-                  flex
                   items-center
                   justify-center
+                  rounded-full
+                  bg-cyan-100
                 "
               >
                 <MessageCircle className="text-cyan-600" />
@@ -216,17 +197,17 @@ export default function DashboardPage() {
           </div>
 
           {/* Status */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm">
+          <div className="rounded-3xl bg-white p-6 shadow-sm transition hover:shadow-md">
             <div className="flex items-center gap-4">
               <div
                 className="
+                  flex
                   h-14
                   w-14
-                  rounded-full
-                  bg-green-100
-                  flex
                   items-center
                   justify-center
+                  rounded-full
+                  bg-green-100
                 "
               >
                 <Radio className="text-green-600" />
@@ -246,123 +227,94 @@ export default function DashboardPage() {
         </div>
 
         {/* FEATURE CARDS */}
-        <div className="grid lg:grid-cols-3 gap-6 mt-8">
-          {/* ONBOARDING */}
-          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-[560px]">
-            <div className="h-[220px] flex items-center justify-center">
+        <div className="mt-10 grid gap-6 lg:grid-cols-3">
+          {/* USER INSIGHTS */}
+          <div className="group flex min-h-[500px] flex-col rounded-[32px] bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+            <div className="flex h-[220px] items-center justify-center rounded-3xl bg-gradient-to-br from-violet-50 to-purple-100 p-6">
               <Image
                 src="/dashboard/onboarding.png"
-                alt="onboarding"
-                width={320}
-                height={220}
-                className="object-contain"
+                alt="User Insights"
+                width={870}
+                height={870}
+                className="h-auto w-auto max-h-[180px] object-contain drop-shadow-md transition duration-300 group-hover:scale-105"
               />
             </div>
 
-            <h2 className="mt-4 text-3xl font-semibold text-slate-900">
+            <h2 className="mt-6 text-3xl font-semibold text-slate-900">
               User Insights
             </h2>
 
-            <p className="mt-3 text-slate-500 flex-grow">
-              Complete or update your personal profile information.
+            <p className="mt-3 flex-grow leading-7 text-slate-500">
+              Complete or update your personal profile information,
+              preferences, and onboarding details to personalize
+              your AGIX experience.
             </p>
 
             <button
               onClick={() => router.push("/onboarding")}
-              className="
-                mt-6
-                w-full
-                rounded-2xl
-                bg-gradient-to-r
-                from-violet-600
-                to-purple-400
-                py-4
-                text-white
-                font-semibold
-              "
+              className="mt-6 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-400 py-4 font-semibold text-white shadow-md transition hover:opacity-90"
             >
               See Details →
             </button>
           </div>
 
-          {/* COMPANIONS */}
-          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-[560px]">
-            <div className="h-[220px] flex items-center justify-center">
+          {/* AI COMPANIONS */}
+          <div className="group flex min-h-[500px] flex-col rounded-[32px] bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+            <div className="flex h-[220px] items-center justify-center rounded-3xl bg-gradient-to-br from-violet-50 to-purple-100 p-6">
               <Image
                 src="/dashboard/robot.png"
-                alt="companion"
-                width={320}
-                height={220}
-                className="object-contain"
+                alt="AI Companions"
+                width={220}
+                height={170}
+                className="h-auto w-auto max-h-[180px] object-contain drop-shadow-md transition duration-300 group-hover:scale-105"
               />
             </div>
 
-            <h2 className="mt-4 text-3xl font-semibold text-slate-900">
+            <h2 className="mt-6 text-3xl font-semibold text-slate-900">
               AI Companions
             </h2>
 
-            <p className="mt-3 text-slate-500 flex-grow">
-              Explore and chat with specialized AI companions.
+            <p className="mt-3 flex-grow leading-7 text-slate-500">
+              Explore and chat with specialized AI companions built
+              to assist with productivity, learning, workflows,
+              and intelligent conversations.
             </p>
 
             <button
               onClick={() => router.push("/companions")}
-              className="
-                mt-6
-                w-full
-                rounded-2xl
-                bg-gradient-to-r
-                from-violet-600
-                to-purple-400
-                py-4
-                text-white
-                font-semibold
-              "
+              className="mt-6 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-400 py-4 font-semibold text-white shadow-md transition hover:opacity-90"
             >
               View Companions →
             </button>
           </div>
 
-          {/* LOGOUT */}
-          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-[560px]">
-            <div className="h-[220px] flex items-center justify-center">
+          {/* DOCUMENTS SHARED */}
+          <div className="group flex min-h-[500px] flex-col rounded-[32px] bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+            <div className="flex h-[220px] items-center justify-center rounded-3xl bg-gradient-to-br from-violet-50 to-purple-100 p-6">
               <Image
-                src="/dashboard/logout.png"
-                alt="Logout"
-                width={320}
-                height={220}
-                className="object-contain"
+                src="/dashboard/brain.png"
+                alt="Documents Shared"
+                width={220}
+                height={170}
+                className="h-auto w-auto max-h-[180px] object-contain drop-shadow-md transition duration-300 group-hover:scale-105"
               />
             </div>
 
-            <h2 className="mt-4 text-3xl font-semibold text-slate-900">
-              Logout
+            <h2 className="mt-6 text-3xl font-semibold text-slate-900">
+              Documents Shared
             </h2>
 
-            <p className="mt-3 text-slate-500 flex-grow">
-              Securely sign out from your AGIX account.
+            <p className="mt-3 flex-grow leading-7 text-slate-500">
+              Upload, manage, and inspect documents shared with AGIX
+              for RAG, memory, and document-based conversations
+              across your AI workflows.
             </p>
 
             <button
-              onClick={handleLogout}
-              className="
-                mt-6
-                w-full
-                rounded-2xl
-                bg-gradient-to-r
-                from-orange-500
-                to-red-500
-                py-4
-                text-white
-                font-semibold
-                flex
-                items-center
-                justify-center
-                gap-2
-              "
+              onClick={() => router.push("/documents")}
+              className="mt-6 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-400 py-4 font-semibold text-white shadow-md transition hover:opacity-90"
             >
-              <LogOut size={18} />
-              Logout
+              View Documents →
             </button>
           </div>
         </div>

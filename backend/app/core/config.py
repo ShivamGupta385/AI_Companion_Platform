@@ -27,6 +27,11 @@ class Settings(BaseSettings):
 
     TAVUS_API_KEY: str
     TAVUS_BASE_URL: str
+    TAVUS_REPLICA_ID: str
+    TAVUS_PERSONA_ID: str
+
+    LIVEAVATAR_SECRET_ID: str
+    ELEVENLABS_AGENT_ID: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -15,6 +15,9 @@ interface ChatInputProps {
   onSend: (message: string) => void;
   loading: boolean;
 
+  companionId: string;
+  companionName?: string;
+
   onDocumentUploaded?: (
     documentName: string
   ) => void;
@@ -23,6 +26,8 @@ interface ChatInputProps {
 export default function ChatInput({
   onSend,
   loading,
+  companionId,
+  companionName,
   onDocumentUploaded,
 }: ChatInputProps) {
   const [message, setMessage] =
@@ -41,25 +46,18 @@ export default function ChatInput({
     useRef<HTMLInputElement>(null);
 
   const handleSend = () => {
-    if (
-      (!message.trim() &&
-        !selectedFile) ||
-      loading
-    ) {
+    if (!message.trim() || loading) {
       return;
     }
 
     onSend(message);
-
     setMessage("");
   };
 
   const startListening = () => {
     const SpeechRecognition =
-      (window as any)
-        .SpeechRecognition ||
-      (window as any)
-        .webkitSpeechRecognition;
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       alert(
@@ -76,15 +74,13 @@ export default function ChatInput({
     recognition.interimResults = false;
 
     setListening(true);
-
     recognition.start();
 
     recognition.onresult = (
       event: any
     ) => {
       const transcript =
-        event.results[0][0]
-          .transcript;
+        event.results[0][0].transcript;
 
       setMessage(transcript);
     };
@@ -101,35 +97,60 @@ export default function ChatInput({
   const handleFileSelect = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file =
-      e.target.files?.[0];
+    const file = e.target.files?.[0];
 
     if (!file) return;
+
+    if (!companionId) {
+      alert(
+        "Companion is not loaded yet. Please try again."
+      );
+      return;
+    }
 
     try {
       setSelectedFile(file);
       setUploading(true);
 
+      console.log("Uploading file:", file.name);
+      console.log("Companion ID:", companionId);
+      console.log("Companion Name:", companionName);
+
       const result =
         await ragService.uploadDocument(
-          file
+          file,
+          companionId
         );
 
       console.log(
-        "Uploaded:",
+        "Uploaded successfully:",
         result
+      );
+
+      alert(
+        `${result.file_name} uploaded successfully${
+          companionName
+            ? ` for ${companionName}`
+            : ""
+        }`
       );
 
       onDocumentUploaded?.(
         result.file_name
       );
-    } catch (error) {
-      console.error(error);
 
-      alert(
-        "Document upload failed"
+      setSelectedFile(null);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      console.error(
+        "Document upload failed:",
+        error
       );
 
+      alert("Document upload failed");
       setSelectedFile(null);
     } finally {
       setUploading(false);
@@ -166,9 +187,7 @@ export default function ChatInput({
               "
             >
               {selectedFile.name}
-
-              {uploading &&
-                " (Uploading...)"}
+              {uploading && " (Uploading...)"}
             </span>
           </div>
 
@@ -203,9 +222,7 @@ export default function ChatInput({
             type="file"
             className="hidden"
             accept=".pdf,.txt,.doc,.docx"
-            onChange={
-              handleFileSelect
-            }
+            onChange={handleFileSelect}
           />
 
           <button
@@ -213,6 +230,7 @@ export default function ChatInput({
             onClick={() =>
               fileInputRef.current?.click()
             }
+            disabled={uploading}
             className="
               w-10
               h-10
@@ -223,7 +241,9 @@ export default function ChatInput({
               text-slate-500
               hover:bg-slate-100
               transition
+              disabled:opacity-50
             "
+            title="Upload document"
           >
             <Paperclip size={18} />
           </button>
@@ -237,14 +257,10 @@ export default function ChatInput({
             }
             value={message}
             onChange={(e) =>
-              setMessage(
-                e.target.value
-              )
+              setMessage(e.target.value)
             }
             onKeyDown={(e) => {
-              if (
-                e.key === "Enter"
-              ) {
+              if (e.key === "Enter") {
                 handleSend();
               }
             }}
@@ -258,13 +274,12 @@ export default function ChatInput({
           />
 
           <button
-            onClick={
-              startListening
-            }
+            onClick={startListening}
             type="button"
             disabled={
               listening ||
-              loading
+              loading ||
+              uploading
             }
             className="
               w-10
@@ -278,6 +293,7 @@ export default function ChatInput({
               text-violet-600
               hover:bg-violet-50
               transition
+              disabled:opacity-50
             "
           >
             <Mic size={18} />
@@ -287,7 +303,8 @@ export default function ChatInput({
             onClick={handleSend}
             disabled={
               loading ||
-              uploading
+              uploading ||
+              !message.trim()
             }
             className="
               flex
@@ -308,10 +325,7 @@ export default function ChatInput({
               disabled:opacity-50
             "
           >
-            {loading
-              ? "..."
-              : "Send"}
-
+            {loading ? "..." : "Send"}
             <Send size={16} />
           </button>
         </div>

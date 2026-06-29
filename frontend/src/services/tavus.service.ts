@@ -6,7 +6,7 @@ export const tavusService = {
     const token = Cookies.get("token");
 
     const response = await api.post(
-      `/tavus/session/${companionId}`,
+      `/api/v1/tavus/session/${companionId}`,   // ✅ fixed path
       {},
       {
         headers: {
@@ -22,7 +22,7 @@ export const tavusService = {
     const token = Cookies.get("token");
 
     const response = await api.get(
-      `/tavus/session/${conversationId}`,
+      `/api/v1/tavus/session/${conversationId}`,   // ✅ fixed path
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -32,4 +32,24 @@ export const tavusService = {
 
     return response.data;
   },
+
+  async sendMessage(conversationId: string, message: string) {
+    const token = Cookies.get("token");
+
+    const response = await api.post(
+      `/api/v1/chat/`,   // ✅ fixed path
+      {
+        conversation_id: conversationId,
+        message: message,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    // Response contains { response: string, tavus_video_url?: string }
+    return response.data;
+  }
 };

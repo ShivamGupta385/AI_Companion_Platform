@@ -10,6 +10,7 @@ from backend.app.schemas.knowledge_graph_schema import (
     ExtractedGraphPayload
 )
 from backend.app.services.llm_provider import llm
+from backend.app.utils.text_cleaner import clean_text
 
 
 class GraphExtractionService:
@@ -30,6 +31,8 @@ class GraphExtractionService:
         Returns:
             ExtractedGraphPayload
         """
+
+        cleaned_text = clean_text(text)
 
         prompt = f"""
 You are an information extraction engine.
@@ -86,21 +89,38 @@ RULES:
    }}
 
 TEXT:
-{text}
+{cleaned_text}
 """
 
         response = llm.invoke(
             [("human", prompt)]
         )
 
-        raw_output = response.content.strip()
+        raw_output = clean_text(response.content)
 
-        # Clean accidental markdown fences if LLM adds them
+        # Remove accidental markdown fences if model adds them
         raw_output = raw_output.replace("```json", "")
         raw_output = raw_output.replace("```", "").strip()
 
         try:
             data = json.loads(raw_output)
+
+            # --------------------------------------------------
+            # Clean parsed JSON values before validation
+            # --------------------------------------------------
+            for node in data.get("nodes", []):
+                node["name"] = clean_text(node.get("name", ""))
+                node["type"] = clean_text(node.get("type", ""))
+                node["description"] = clean_text(
+                    node.get("description", "")
+                )
+
+            for edge in data.get("edges", []):
+                edge["source"] = clean_text(edge.get("source", ""))
+                edge["target"] = clean_text(edge.get("target", ""))
+                edge["relation"] = clean_text(edge.get("relation", ""))
+                edge["evidence"] = clean_text(edge.get("evidence", ""))
+
             return ExtractedGraphPayload.model_validate(data)
 
         except Exception as e:
@@ -125,6 +145,13 @@ TEXT:
         Find existing node for the same user by name,
         otherwise create a new one.
         """
+
+        node_name = clean_text(node_name)
+        node_type = clean_text(node_type)
+        description = clean_text(description) if description else None
+
+        if not node_name:
+            raise ValueError("Node name cannot be empty")
 
         existing_node = (
             db.query(KnowledgeNode)
@@ -164,6 +191,12 @@ TEXT:
         """
         Create graph edge if it does not already exist.
         """
+
+        relation_type = clean_text(relation_type)
+        evidence_text = clean_text(evidence_text) if evidence_text else None
+
+        if not relation_type:
+            return None
 
         existing_edge = (
             db.query(KnowledgeEdge)
@@ -208,14 +241,27 @@ TEXT:
         4. Return extracted payload
         """
 
+        cleaned_text = clean_text(text)
+
+        if not cleaned_text.strip():
+            return ExtractedGraphPayload(
+                nodes=[],
+                edges=[]
+            )
+
         graph_payload = GraphExtractionService.extract_graph_from_text(
-            text=text
+            text=cleaned_text
         )
 
         node_map = {}
 
+        # --------------------------------------------------
         # 1) Save nodes
+        # --------------------------------------------------
         for node_data in graph_payload.nodes:
+            if not clean_text(node_data.name).strip():
+                continue
+
             node = GraphExtractionService.get_or_create_node(
                 db=db,
                 user_id=user_id,
@@ -226,12 +272,17 @@ TEXT:
                 source_conversation_id=source_conversation_id
             )
 
-            node_map[node_data.name] = node
+            node_map[clean_text(node_data.name)] = node
 
+        # --------------------------------------------------
         # 2) Save edges
+        # --------------------------------------------------
         for edge_data in graph_payload.edges:
-            source_node = node_map.get(edge_data.source)
-            target_node = node_map.get(edge_data.target)
+            source_name = clean_text(edge_data.source)
+            target_name = clean_text(edge_data.target)
+
+            source_node = node_map.get(source_name)
+            target_node = node_map.get(target_name)
 
             if not source_node or not target_node:
                 continue

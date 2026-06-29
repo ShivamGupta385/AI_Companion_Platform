@@ -1,102 +1,67 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    status
-)
-
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from backend.app.db.session import get_db
-from backend.app.models.user import User
-from backend.app.models.companion import Companion
-from backend.app.core.security import get_current_user
-from backend.app.schemas.tavus_schema import (
-    TavusSessionCreateResponse,
-    TavusConversationResponse
-)
+from backend.app.models.conversation import Conversation
+from backend.app.schemas.chat_schema import ChatRequest, ChatResponse
+from backend.app.services.llm_provider import llm
 from backend.app.services.tavus_service import TavusService
 
 router = APIRouter()
 
-
 @router.post(
-    "/session/{companion_id}",
-    response_model=TavusSessionCreateResponse,
+    "/chat",
+    response_model=ChatResponse,
     status_code=status.HTTP_200_OK
 )
-def create_tavus_session(
-    companion_id: str,
-    current_user: User = Depends(get_current_user),
+def send_message(
+    request: ChatRequest,
     db: Session = Depends(get_db)
 ):
     """
-    Create a Tavus avatar session for a selected AGIX companion.
+    Send a message to the LLM and Tavus avatar.
     """
 
-    companion = (
-        db.query(Companion)
-        .filter(
-            Companion.id == companion_id,
-            Companion.is_active == True
-        )
-        .first()
-    )
-
-    if not companion:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Companion not found"
-        )
-
-    if companion.avatar_provider != "tavus":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Companion '{companion.name}' is not configured for Tavus. "
-                f"Current avatar_provider={companion.avatar_provider}"
-            )
-        )
-
-    if not companion.tavus_replica_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Companion '{companion.name}' does not have tavus_replica_id configured"
-            )
-        )
-
     try:
-        tavus_response = TavusService.create_conversation(
-            replica_id=companion.tavus_replica_id,
-            persona_id=companion.tavus_persona_id,
-            conversation_name=(
-                f"{companion.name} - {current_user.full_name or current_user.email}"
+        # ✅ Validate and cast conversation_id to UUID
+        try:
+            conversation_uuid = UUID(str(request.conversation_id))
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid conversation_id format"
             )
+
+        # ✅ Check if conversation exists
+        conversation = db.query(Conversation).filter(
+            Conversation.id == conversation_uuid
+        ).first()
+
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found"
+            )
+
+        # ✅ Call your LLM service
+        llm_response = llm.generate_response(request.message)
+
+        # ✅ Call Tavus to generate avatar video
+        tavus_response = TavusService.send_message(
+            conversation_id=str(conversation_uuid),
+            text=request.message
         )
 
-        print("[TAVUS CREATE RESPONSE]", tavus_response)
-
-        conversation_id = (
-            tavus_response.get("conversation_id")
-            or tavus_response.get("id")
-            or ""
+        return ChatResponse(
+            response=llm_response,
+            tavus_video_url=tavus_response.get("video_url") or tavus_response.get("url")
         )
 
-        conversation_url = (
-            tavus_response.get("conversation_url")
-            or tavus_response.get("url")
-        )
-
-        return TavusSessionCreateResponse(
-            conversation_id=conversation_id,
-            conversation_url=conversation_url,
-            replica_id=companion.tavus_replica_id,
-            persona_id=companion.tavus_persona_id
-        )
-
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Tavus session creation failed: {str(e)}"
+            detail=f"Chat failed: {str(e)}"
         )

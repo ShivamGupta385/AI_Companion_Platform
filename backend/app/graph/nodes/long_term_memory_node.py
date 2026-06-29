@@ -4,6 +4,10 @@ from backend.app.db.session import SessionLocal
 from backend.app.services.long_term_memory_service import (
     LongTermMemoryService
 )
+from backend.app.utils.text_cleaner import (
+    clean_text,
+    clean_string_list
+)
 
 
 def long_term_memory_node(state):
@@ -77,19 +81,19 @@ def long_term_memory_node(state):
         )
 
         # --------------------------------------------------
-        # Extract text payloads for LLM state
+        # Extract + clean text payloads for LLM state
         # --------------------------------------------------
-        memory_texts = [
+        memory_texts = clean_string_list([
             memory.memory_text.strip()
             for memory in memories
             if memory.memory_text
-        ]
+        ])
 
-        summary_texts = [
+        summary_texts = clean_string_list([
             summary.summary_text.strip()
             for summary in summaries
             if summary.summary_text
-        ]
+        ])
 
         print("=" * 60)
         print("[LONG TERM MEMORY NODE]")

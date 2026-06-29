@@ -1,5 +1,7 @@
 import traceback
+
 from backend.app.services.retriever_service import retrieve_context
+from backend.app.utils.text_cleaner import clean_text
 
 
 MEMORY_QUERY_KEYWORDS = [
@@ -31,12 +33,13 @@ def is_memory_query(query: str) -> bool:
 
 def rag_node(state):
     try:
-        query = state.get("user_message", "")
+        query = clean_text(state.get("user_message", ""))
 
         if not query or not query.strip():
             print("=" * 60)
             print("[RAG NODE] Empty query")
             print("=" * 60)
+
             return {
                 **state,
                 "retrieved_context": ""
@@ -64,6 +67,8 @@ def rag_node(state):
 
         if context is None:
             context = ""
+
+        context = clean_text(context)
 
         print("[RAG NODE] CONTEXT LENGTH:", len(context))
         print("[RAG NODE] CONTEXT PREVIEW:")

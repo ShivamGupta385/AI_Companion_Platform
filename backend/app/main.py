@@ -32,6 +32,10 @@ from backend.app.api.v1.tavus import (
     router as tavus_router
 )
 
+from backend.app.api.v1.openai_router import router as openai_router
+
+
+
 app = FastAPI(
     title="AI Companion Platform",
     version="1.0.0"
@@ -114,6 +118,11 @@ app.include_router(
     tags=["Tavus Avatar"]
 )
 
+app.include_router(
+    openai_router,
+    prefix="/api/v1/openai",
+    tags=["OpenAI Compatible API"],
+)
 @app.get("/")
 def root():
     return {
