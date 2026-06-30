@@ -1,7 +1,6 @@
 from langgraph.graph import StateGraph, END
 
 from backend.app.graph.state import CompanionState
-from backend.app.graph.checkpointer import get_checkpointer
 
 from backend.app.graph.nodes.memory_node import memory_node
 from backend.app.graph.nodes.history_node import history_node
@@ -29,7 +28,7 @@ def build_graph():
     graph_builder.add_node("llm", llm_node)
 
     # --------------------------------------------------
-    # Entry point
+    # Entry Point
     # --------------------------------------------------
     graph_builder.set_entry_point("memory")
 
@@ -46,20 +45,3 @@ def build_graph():
     graph_builder.add_edge("llm", END)
 
     return graph_builder
-
-
-# --------------------------------------------------
-# Build graph + attach Postgres checkpointer
-# --------------------------------------------------
-graph_builder = build_graph()
-
-# Enter context manager and get actual saver instance
-_checkpointer_cm = get_checkpointer()
-checkpointer = _checkpointer_cm.__enter__()
-
-# Create checkpoint tables if not already created
-checkpointer.setup()
-
-graph = graph_builder.compile(
-    checkpointer=checkpointer
-)

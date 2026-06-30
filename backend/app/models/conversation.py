@@ -1,7 +1,16 @@
 import uuid
 
-from sqlalchemy import String, DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    String,
+    DateTime,
+    ForeignKey,
+)
+
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+)
+
 from sqlalchemy.sql import func
 
 from backend.app.db.base import Base
@@ -25,6 +34,14 @@ class Conversation(Base):
 
     conversation_type: Mapped[str] = mapped_column(
         String(50)
+    )
+
+    # --------------------------
+    # Tavus Conversation ID
+    # --------------------------
+    tavus_conversation_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
     )
 
     started_at: Mapped[DateTime] = mapped_column(

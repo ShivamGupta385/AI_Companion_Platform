@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     LIVEAVATAR_SECRET_ID: str
     ELEVENLABS_AGENT_ID: str
 
+    # ---------------------------------
+    # Tavus Callback URL
+    # ---------------------------------
+    BACKEND_URL: str = "http://localhost:8000"  # ⬅️ ADD THIS LINE
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore"

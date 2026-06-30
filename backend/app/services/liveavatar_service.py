@@ -1,4 +1,4 @@
-import requests
+import httpx
 from typing import Any, Dict
 
 from backend.app.core.config import settings
@@ -9,7 +9,7 @@ LIVEAVATAR_SESSION_URL = (
 )
 
 
-def create_avatar_session() -> Dict[str, Any]:
+async def create_avatar_session() -> Dict[str, Any]:
     """
     Create a plain LiveAvatar LITE session.
 
@@ -44,12 +44,13 @@ def create_avatar_session() -> Dict[str, Any]:
 
     try:
 
-        response = requests.post(
-            LIVEAVATAR_SESSION_URL,
-            headers=headers,
-            json=payload,
-            timeout=30,
-        )
+        async with httpx.AsyncClient(timeout=30.0) as client:
+
+            response = await client.post(
+                LIVEAVATAR_SESSION_URL,
+                headers=headers,
+                json=payload,
+            )
 
         print("=" * 80)
         print("[LIVEAVATAR SESSION]")
@@ -63,7 +64,7 @@ def create_avatar_session() -> Dict[str, Any]:
 
         return response.json()
 
-    except requests.HTTPError as e:
+    except httpx.HTTPStatusError as e:
 
         raise Exception(
             "LiveAvatar session creation failed.\n"
@@ -71,7 +72,7 @@ def create_avatar_session() -> Dict[str, Any]:
             f"Response: {response.text}"
         ) from e
 
-    except requests.RequestException as e:
+    except httpx.RequestError as e:
 
         raise Exception(
             f"LiveAvatar request failed: {str(e)}"

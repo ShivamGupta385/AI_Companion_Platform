@@ -7,7 +7,6 @@ from backend.app.models.companion import Companion
 from backend.app.models.conversation import Conversation
 from backend.app.models.user_onboarding import UserOnboarding
 
-from backend.app.graph.graph import graph
 
 from backend.app.services.long_term_memory_service import (
     LongTermMemoryService,
@@ -141,12 +140,13 @@ class ChatService:
         return assistant_message
 
     @staticmethod
-    def process_chat(
-        db: Session,
-        current_user: User,
-        conversation_id: int,
-        message: str,
-    ) -> str:
+    async def process_chat(
+    graph,
+    db: Session,
+    current_user: User,
+    conversation_id: int,
+    message: str,
+) -> str:
         """
         Process a complete chat request using LangGraph.
 
@@ -222,17 +222,21 @@ class ChatService:
             }
 
             # 9) Invoke LangGraph
-            result = graph.invoke(
-                graph_input,
-                config={"configurable": {"thread_id": str(conversation.id)}},
-            )
+            result = await graph.ainvoke(
+            graph_input,
+            config={
+                "configurable": {
+                    "thread_id": str(conversation.id)
+                }
+            },
+        )
 
             print("=" * 80)
             print("[GRAPH RESULT]")
             print(result)
             print("=" * 80)
 
-            ai_response = clean_text(result.get("response", ""))
+            ai_response = result.get("response", "").strip()
             if not ai_response.strip():
                 raise RuntimeError("LangGraph returned an empty response.")
 
@@ -265,19 +269,19 @@ class ChatService:
                 print("Updating Long-Term Memory...")
                 print("=" * 80)
 
-                LongTermMemoryService.upsert_conversation_summary(
-                    db=db,
-                    conversation_id=conversation.id,
-                    user_id=current_user.id,
-                    companion_id=companion.id,
-                )
+                await LongTermMemoryService.upsert_conversation_summary(
+                db=db,
+                conversation_id=conversation.id,
+                user_id=current_user.id,
+                companion_id=companion.id,
+            )
 
-                LongTermMemoryService.extract_and_store_memories(
-                    db=db,
-                    conversation_id=conversation.id,
-                    user_id=current_user.id,
-                    companion_id=companion.id,
-                )
+            await LongTermMemoryService.extract_and_store_memories(
+                db=db,
+                conversation_id=conversation.id,
+                user_id=current_user.id,
+                companion_id=companion.id,
+            )
 
             # 14) Commit Transaction
             db.commit()

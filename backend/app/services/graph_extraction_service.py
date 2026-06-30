@@ -21,7 +21,7 @@ class GraphExtractionService:
     """
 
     @staticmethod
-    def extract_graph_from_text(
+    async def extract_graph_from_text(
         text: str
     ) -> ExtractedGraphPayload:
         """
@@ -92,8 +92,8 @@ TEXT:
 {cleaned_text}
 """
 
-        response = llm.invoke(
-            [("human", prompt)]
+        response = await llm.ainvoke(
+        [("human", prompt)]
         )
 
         raw_output = clean_text(response.content)
@@ -226,7 +226,7 @@ TEXT:
         return edge
 
     @staticmethod
-    def extract_and_store_graph(
+    async def extract_and_store_graph(
         db: Session,
         user_id: UUID,
         text: str,
@@ -249,8 +249,8 @@ TEXT:
                 edges=[]
             )
 
-        graph_payload = GraphExtractionService.extract_graph_from_text(
-            text=cleaned_text
+        graph_payload = await GraphExtractionService.extract_graph_from_text(
+        text=cleaned_text
         )
 
         node_map = {}

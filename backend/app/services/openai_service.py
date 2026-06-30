@@ -27,24 +27,25 @@ class OpenAIService:
     """
 
     @staticmethod
-    def create_chat_completion(
+    async def create_chat_completion(
         db: Session,
         current_user: User,
         conversation_id,
         request: ChatCompletionRequest,
+        graph,
     ) -> ChatCompletionResponse:
         """
-        Execute LangGraph using the last user message
+        Execute LangGraph using the latest user message
         and return an OpenAI-compatible response.
         """
 
-        # --------------------------------------------
+        # -------------------------------------------------
         # Extract latest user message
-        # --------------------------------------------
+        # -------------------------------------------------
         user_messages = [
-            msg
-            for msg in request.messages
-            if msg.role == "user"
+            message
+            for message in request.messages
+            if message.role == "user"
         ]
 
         if not user_messages:
@@ -54,20 +55,24 @@ class OpenAIService:
 
         latest_user_message = user_messages[-1].content
 
-        # --------------------------------------------
-        # Execute existing chat pipeline
-        # --------------------------------------------
-        assistant_response = ChatService.process_chat(
+        # -------------------------------------------------
+        # Execute LangGraph chat pipeline
+        # -------------------------------------------------
+        assistant_response = await ChatService.process_chat(
+            graph=graph,
             db=db,
             current_user=current_user,
             conversation_id=conversation_id,
             message=latest_user_message,
         )
 
-        # --------------------------------------------
-        # Approximate usage statistics
-        # --------------------------------------------
-        prompt_tokens = len(latest_user_message.split())
+        # -------------------------------------------------
+        # Approximate token usage
+        # -------------------------------------------------
+        prompt_tokens = len(
+            latest_user_message.split()
+        )
+
         completion_tokens = len(
             assistant_response.split()
         )
@@ -76,14 +81,14 @@ class OpenAIService:
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=(
-                prompt_tokens +
-                completion_tokens
+                prompt_tokens
+                + completion_tokens
             ),
         )
 
-        # --------------------------------------------
-        # Build OpenAI response
-        # --------------------------------------------
+        # -------------------------------------------------
+        # Build OpenAI-compatible response
+        # -------------------------------------------------
         return ChatCompletionResponse(
             id=f"chatcmpl-{uuid.uuid4().hex}",
             object="chat.completion",

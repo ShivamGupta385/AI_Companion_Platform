@@ -11,11 +11,11 @@ retriever = vector_store.as_retriever(
 )
 
 
-def retrieve_context(
+async def retrieve_context(
     query: str
 ):
 
-    documents = retriever.invoke(
+    documents = await retriever.ainvoke(
         query
     )
 

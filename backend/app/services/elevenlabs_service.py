@@ -1,4 +1,4 @@
-import requests
+import httpx
 from typing import Dict, Any
 
 from backend.app.core.config import settings
@@ -8,18 +8,11 @@ LIVEAVATAR_SECRET_URL = "https://api.liveavatar.com/v1/secrets"
 
 
 class ElevenLabsService:
+
     @staticmethod
-    def register_api_key() -> Dict[str, Any]:
+    async def register_api_key() -> Dict[str, Any]:
         """
         Register the ElevenLabs API key with LiveAvatar.
-
-        Returns:
-            {
-                "data": {
-                    "secret_id": "...",
-                    ...
-                }
-            }
         """
 
         payload = {
@@ -36,12 +29,13 @@ class ElevenLabsService:
 
         try:
 
-            response = requests.post(
-                LIVEAVATAR_SECRET_URL,
-                json=payload,
-                headers=headers,
-                timeout=30
-            )
+            async with httpx.AsyncClient(timeout=30) as client:
+
+                response = await client.post(
+                    LIVEAVATAR_SECRET_URL,
+                    json=payload,
+                    headers=headers
+                )
 
             print("=" * 70)
             print("[ELEVENLABS SECRET REGISTRATION]")
@@ -54,13 +48,13 @@ class ElevenLabsService:
 
             return response.json()
 
-        except requests.HTTPError as e:
+        except httpx.HTTPStatusError as e:
             raise Exception(
                 f"Failed to register ElevenLabs API Key: "
                 f"{response.status_code} - {response.text}"
             ) from e
 
-        except requests.RequestException as e:
+        except httpx.RequestError as e:
             raise Exception(
                 f"LiveAvatar request failed: {str(e)}"
             ) from e

@@ -33,7 +33,7 @@ router = APIRouter()
     response_model=ConversationResponse,
     status_code=status.HTTP_201_CREATED
 )
-def create_conversation(
+async def create_conversation(
     conversation_data: ConversationCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -74,7 +74,7 @@ def create_conversation(
     "/",
     response_model=list[ConversationListItem]
 )
-def get_conversations(
+async def get_conversations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -138,7 +138,7 @@ def get_conversations(
     "/{conversation_id}",
     response_model=ConversationDetailResponse
 )
-def get_conversation(
+async def get_conversation(
     conversation_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

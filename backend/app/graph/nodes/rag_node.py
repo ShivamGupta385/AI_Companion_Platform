@@ -31,7 +31,7 @@ def is_memory_query(query: str) -> bool:
     )
 
 
-def rag_node(state):
+async def rag_node(state):
     try:
         query = clean_text(state.get("user_message", ""))
 
@@ -63,7 +63,7 @@ def rag_node(state):
         print("[RAG NODE] Running retrieval")
         print("QUERY:", query)
 
-        context = retrieve_context(query)
+        context = await retrieve_context(query)
 
         if context is None:
             context = ""

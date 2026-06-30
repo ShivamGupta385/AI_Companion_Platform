@@ -1,40 +1,31 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { VideoOff } from "lucide-react";
 import { tavusService } from "@/services/tavus.service";
 
 interface Props {
   companionId: string;
-  latestMessage?: string; // passed down from chat page
 }
 
-interface TavusSession {
-  conversation_id: string;
-  conversation_url?: string;
-  replica_id?: string;
-  persona_id?: string;
-}
-
-interface ChatResponse {
-  response: string;
-  tavus_video_url?: string;
-}
-
-export default function TavusAvatar({ companionId, latestMessage }: Props) {
+export default function TavusAvatar({ companionId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
-  const [session, setSession] = useState<TavusSession | null>(null);
-  const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null);
+  const [conversationUrl, setConversationUrl] = useState<string>("");
 
-  // Create Tavus conversation session
   const createConversation = useCallback(async () => {
     try {
       setLoading(true);
-      const sessionData: TavusSession = await tavusService.createSession(companionId);
-      setSession(sessionData);
+      const sessionData = await tavusService.createSession(companionId);
+      
+      if (sessionData?.conversation_url) {
+        setConversationUrl(sessionData.conversation_url);
+      } else {
+        throw new Error("Failed to get video URL");
+      }
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "Failed to create Tavus session");
+      const errorMsg = err?.response?.data?.detail || err?.message || "Video unavailable";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -45,63 +36,35 @@ export default function TavusAvatar({ companionId, latestMessage }: Props) {
     createConversation();
   }, [createConversation]);
 
-  // Whenever a new message comes in from chat page, send it to Tavus
-  useEffect(() => {
-    const sendToTavus = async () => {
-      if (!session?.conversation_id || !latestMessage) return;
-      try {
-        const data: ChatResponse = await tavusService.sendMessage(
-          session.conversation_id,
-          latestMessage
-        );
-        setChatResponse(data);
-      } catch (err: any) {
-        const detail = err?.response?.data?.detail;
-        setError(typeof detail === "string" ? detail : "Failed to send message to Tavus");
-      }
-    };
-
-    sendToTavus();
-  }, [latestMessage, session?.conversation_id]);
-
-  if (loading) {
+  if (error) {
     return (
-      <div className="flex h-[430px] items-center justify-center rounded-3xl border bg-white shadow-sm">
-        Starting Tavus Avatar...
+      <div className="w-full h-[500px] rounded-2xl bg-slate-900 flex flex-col items-center justify-center text-center p-6 shadow-lg">
+        <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mb-3">
+          <VideoOff size={24} className="text-slate-500" />
+        </div>
+        <p className="text-sm text-slate-400 font-medium">Video Unavailable</p>
+        <p className="text-xs text-slate-600 mt-1 max-w-[250px]">{error.includes("402") ? "Credits required" : error}</p>
       </div>
     );
   }
 
-  if (error) {
+  if (loading) {
     return (
-      <div className="flex h-[430px] items-center justify-center rounded-3xl border bg-red-50 text-red-600 shadow-sm">
-        {error}
+      <div className="w-full h-[500px] rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
+        <p className="text-sm text-slate-400 animate-pulse">Connecting to Avatar...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-3xl p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Tavus Avatar</h2>
-        {chatResponse ? (
-          <>
-            <p><strong>AI Response:</strong> {chatResponse.response}</p>
-            {chatResponse.tavus_video_url ? (
-              <video
-                src={chatResponse.tavus_video_url}
-                controls
-                autoPlay
-                className="rounded shadow-md w-full"
-              />
-            ) : (
-              <p className="text-slate-500">No Tavus video available.</p>
-            )}
-          </>
-        ) : (
-          <p className="text-slate-500">Waiting for AI response…</p>
-        )}
-      </div>
+    <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-xl relative">
+      <iframe
+        src={conversationUrl}
+        className="w-full h-full border-none absolute inset-0 origin-center scale-[1.10]"
+        allow="microphone; camera; autoplay; display-capture; fullscreen"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+        title="Tavus Avatar"
+      />
     </div>
   );
 }

@@ -21,7 +21,13 @@ from backend.app.schemas.message_schema import MessageResponse
 from backend.app.schemas.chat_schema import ChatRequest, ChatResponse
 
 from backend.app.core.security import get_current_user
-from backend.app.graph.graph import graph
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    status,
+)
 from backend.app.services.long_term_memory_service import (
     LongTermMemoryService
 )
@@ -68,10 +74,11 @@ def build_memory_buffer(
     response_model=ChatResponse,
     status_code=status.HTTP_200_OK
 )
-def chat(
+async def chat(
+    request: Request,
     chat_data: ChatRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Chat with selected companion using LangGraph.
@@ -147,7 +154,9 @@ def chat(
         # ---------------------------------------------------
         # 3) Invoke LangGraph with short-term memory
         # ---------------------------------------------------
-        result = graph.invoke(
+        graph = request.app.state.graph
+
+        result = await graph.ainvoke(
             {
                 "conversation_id": str(conversation.id),
                 "companion_id": str(companion.id),
@@ -159,7 +168,7 @@ def chat(
                     if onboarding and onboarding.baseline_data
                     else {}
                 ),
-                "memory": memory_buffer
+                "memory": memory_buffer,
             },
             config={
                 "configurable": {
@@ -167,7 +176,6 @@ def chat(
                 }
             }
         )
-
         print("=" * 80)
         print("[CHAT] GRAPH RESULT KEYS:", result.keys() if isinstance(result, dict) else type(result))
         print("[CHAT] GRAPH RESULT:", result)
@@ -211,14 +219,14 @@ def chat(
         if message_count >= 8:
             print("[CHAT] Triggering long-term memory update...")
 
-            LongTermMemoryService.upsert_conversation_summary(
+            await LongTermMemoryService.upsert_conversation_summary(
                 db=db,
                 conversation_id=conversation.id,
                 user_id=current_user.id,
                 companion_id=companion.id
             )
 
-            LongTermMemoryService.extract_and_store_memories(
+            await LongTermMemoryService.extract_and_store_memories(
                 db=db,
                 conversation_id=conversation.id,
                 user_id=current_user.id,
@@ -230,7 +238,11 @@ def chat(
         # ---------------------------------------------------
         db.commit()
 
-        return ChatResponse(response=ai_response)
+        # ✅ CORRECT (Include conversation_id)
+        return ChatResponse(
+            conversation_id=conversation.id,
+            response=ai_response,
+        )
 
     except HTTPException:
         db.rollback()
@@ -261,7 +273,7 @@ def chat(
     response_model=list[MessageResponse],
     status_code=status.HTTP_200_OK
 )
-def get_messages(
+async def get_messages(
     conversation_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

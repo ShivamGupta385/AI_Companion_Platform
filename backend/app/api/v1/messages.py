@@ -29,7 +29,7 @@ router = APIRouter()
     response_model=list[MessageResponse],
     status_code=status.HTTP_200_OK
 )
-def get_messages(
+async def get_messages(
     conversation_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

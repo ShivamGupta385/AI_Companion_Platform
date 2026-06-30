@@ -1,19 +1,21 @@
 from backend.app.core.config import settings
 
-# LangGraph Postgres checkpointer
-from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 
 def get_checkpointer():
     """
-    Create a PostgreSQL-backed LangGraph checkpointer.
+    Create an async PostgreSQL-backed LangGraph checkpointer.
 
-    LangGraph PostgresSaver.from_conn_string(...) returns
-    a context manager, so we must enter it before using it.
+    Returns an async context manager that must be used with:
+
+        async with get_checkpointer() as checkpointer:
+            ...
     """
+
     db_uri = settings.DATABASE_URL
 
-    # SQLAlchemy-style URL -> psycopg-compatible URL
+    # SQLAlchemy URL -> psycopg URL
     if db_uri.startswith("postgresql+psycopg://"):
         db_uri = db_uri.replace(
             "postgresql+psycopg://",
@@ -21,4 +23,4 @@ def get_checkpointer():
             1
         )
 
-    return PostgresSaver.from_conn_string(db_uri)
+    return AsyncPostgresSaver.from_conn_string(db_uri)

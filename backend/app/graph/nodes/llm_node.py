@@ -3,7 +3,7 @@ from backend.app.utils.text_cleaner import (
     clean_text,
     clean_string_list
 )
-
+from langchain_core.messages import AIMessageChunk
 
 MEMORY_QUERY_KEYWORDS = [
     "remember",
@@ -58,7 +58,7 @@ def is_document_query(query: str) -> bool:
     )
 
 
-def llm_node(state):
+async def llm_node(state):
     user_message = clean_text(state["user_message"])
 
     # --------------------------------------------------
@@ -343,9 +343,32 @@ IMPORTANT INSTRUCTIONS:
     # --------------------------------------------------
     # 10) LLM INVOCATION
     # --------------------------------------------------
-    response = llm.invoke(messages)
+    response_text = ""
 
-    response_text = clean_text(response.content)
+    async for chunk in llm.astream(messages):
+
+        if not isinstance(chunk, AIMessageChunk):
+            continue
+
+        content = chunk.content
+
+        if isinstance(content, str):
+            token = content
+
+        elif isinstance(content, list):
+            token = "".join(
+                part.get("text", "")
+                for part in content
+                if isinstance(part, dict)
+            )
+
+        else:
+            token = ""
+        token = clean_text(token)
+
+        if token:
+            token = token.replace("\x00", "")
+            response_text += token
 
     print("[LLM NODE RESPONSE]")
     print(response_text)

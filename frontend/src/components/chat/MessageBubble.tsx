@@ -1,16 +1,9 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-
-import {
-  Loader2,
-  Square,
-  Volume2,
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2, Square, Volume2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 
 import { ttsService } from "@/services/tts.service";
 
@@ -27,20 +20,13 @@ export default function MessageBubble({
   onSpeakStart,
   onSpeakEnd,
 }: MessageBubbleProps) {
-  const isUser =
-    senderType === "user";
+  const isUser = senderType === "user";
 
-  const [isLoadingAudio, setIsLoadingAudio] =
-    useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
-  const [isPlayingAudio, setIsPlayingAudio] =
-    useState(false);
-
-  const audioRef =
-    useRef<HTMLAudioElement | null>(null);
-
-  const audioUrlRef =
-    useRef<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
 
   const cleanupAudio = () => {
     if (audioRef.current) {
@@ -52,9 +38,7 @@ export default function MessageBubble({
     }
 
     if (audioUrlRef.current) {
-      URL.revokeObjectURL(
-        audioUrlRef.current
-      );
+      URL.revokeObjectURL(audioUrlRef.current);
       audioUrlRef.current = null;
     }
 
@@ -70,8 +54,6 @@ export default function MessageBubble({
   const handleSpeak = async () => {
     if (isUser) return;
 
-    // If same bubble is already speaking,
-    // clicking again should stop it.
     if (isPlayingAudio || isLoadingAudio) {
       stopAudio();
       return;
@@ -79,18 +61,11 @@ export default function MessageBubble({
 
     try {
       setIsLoadingAudio(true);
-
-      const blob =
-        await ttsService.speak(message);
-
-      const url =
-        URL.createObjectURL(blob);
-
+      const blob = await ttsService.speak(message);
+      const url = URL.createObjectURL(blob);
       audioUrlRef.current = url;
 
-      const audio =
-        new Audio(url);
-
+      const audio = new Audio(url);
       audioRef.current = audio;
 
       audio.onplay = () => {
@@ -99,155 +74,87 @@ export default function MessageBubble({
         onSpeakStart?.();
       };
 
-      audio.onended = () => {
-        cleanupAudio();
-      };
-
+      audio.onended = () => cleanupAudio();
       audio.onerror = () => {
-        console.error(
-          "Audio playback failed"
-        );
+        console.error("Audio playback failed");
         cleanupAudio();
       };
 
       await audio.play();
     } catch (error) {
-      console.error(
-        "TTS Error:",
-        error
-      );
+      console.error("TTS Error:", error);
       cleanupAudio();
     }
   };
 
   useEffect(() => {
-    return () => {
-      cleanupAudio();
-    };
+    return () => cleanupAudio();
   }, []);
 
   return (
-    <div
-      className={`flex ${
-        isUser
-          ? "justify-end"
-          : "justify-start"
-      }`}
-    >
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`
-          max-w-[75%]
-          rounded-[28px]
           px-5
-          py-4
+          py-3
           shadow-sm
-          border
+          overflow-hidden
           ${
             isUser
-              ? `
-                bg-gradient-to-r
-                from-violet-500
-                to-purple-600
-                text-white
-                border-transparent
-              `
-              : `
-                bg-white
-                text-slate-800
-                border-[#ECEAF4]
-              `
+              ? "max-w-[70%] rounded-2xl rounded-br-sm bg-violet-600 text-white shadow-md text-right"
+              : "max-w-[80%] rounded-2xl rounded-bl-sm bg-white text-slate-800 border border-slate-100 shadow-md text-left"
           }
         `}
       >
+        {/* AI Header */}
         {!isUser && (
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className="
-                w-10
-                h-10
-                rounded-full
-                bg-violet-100
-                flex
-                items-center
-                justify-center
-                text-lg
-              "
-            >
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-base">
               🤖
             </div>
-
             <div>
-              <h4
-                className="
-                  text-sm
-                  font-semibold
-                  text-slate-900
-                "
-              >
-                AI Companion
-              </h4>
-
-              <p
-                className="
-                  text-xs
-                  text-slate-500
-                "
-              >
-                Online
-              </p>
+              <h4 className="text-sm font-semibold text-slate-900">AI Companion</h4>
+              <p className="text-xs text-slate-400">Online</p>
             </div>
           </div>
         )}
 
-        <p
-          className="
-            whitespace-pre-wrap
-            leading-7
-          "
-        >
-          {message}
-        </p>
+        {/* Message Text - Fixed overflow and spacing */}
+        <div className="prose prose-sm prose-slate max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5">
+          <ReactMarkdown remarkPlugins={[remarkBreaks]}>
+            {message}
+          </ReactMarkdown>
+        </div>
 
+        {/* Listen Button (Only for AI) */}
         {!isUser && (
-          <div className="mt-4 flex items-center">
+          <div className="mt-3 flex items-center">
             <button
               onClick={handleSpeak}
               disabled={isLoadingAudio}
               className={`
-                flex
-                items-center
-                gap-2
-                text-sm
-                font-medium
-                transition
+                flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full transition
                 ${
                   isPlayingAudio
-                    ? "text-red-600 hover:text-red-700"
-                    : "text-violet-600 hover:text-violet-700"
+                    ? "bg-red-50 text-red-600 hover:bg-red-100"
+                    : "bg-violet-50 text-violet-600 hover:bg-violet-100"
                 }
-                ${
-                  isLoadingAudio
-                    ? "opacity-70 cursor-not-allowed"
-                    : ""
-                }
+                ${isLoadingAudio ? "opacity-70 cursor-not-allowed" : ""}
               `}
             >
               {isLoadingAudio ? (
                 <>
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                  />
+                  <Loader2 size={14} className="animate-spin" />
                   Loading...
                 </>
               ) : isPlayingAudio ? (
                 <>
-                  <Square size={16} />
+                  <Square size={14} />
                   Stop
                 </>
               ) : (
                 <>
-                  <Volume2 size={16} />
+                  <Volume2 size={14} />
                   Listen
                 </>
               )}

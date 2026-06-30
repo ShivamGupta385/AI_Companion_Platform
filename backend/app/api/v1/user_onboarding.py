@@ -30,7 +30,7 @@ router = APIRouter()
     response_model=UserOnboardingResponse,
     status_code=status.HTTP_201_CREATED
 )
-def save_onboarding(
+async def save_onboarding(
     onboarding_data: UserOnboardingCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -72,7 +72,7 @@ def save_onboarding(
     "/me",
     response_model=UserOnboardingResponse
 )
-def get_onboarding(
+async def get_onboarding(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -98,7 +98,7 @@ def get_onboarding(
     response_model=UserOnboardingResponse,
     status_code=status.HTTP_200_OK
 )
-def update_onboarding(
+async def update_onboarding(
     onboarding_data: UserOnboardingCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

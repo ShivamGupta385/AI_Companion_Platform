@@ -117,7 +117,7 @@ async def upload_document(
         # --------------------------------------------------
         # 3) Vector ingestion
         # --------------------------------------------------
-        ingestion_result = ingest_document(
+        ingestion_result = await ingest_document(
             file_path=file_path,
             document_id=str(document.id),
             user_id=str(current_user.id),
@@ -203,7 +203,7 @@ async def upload_document(
     "/",
     response_model=list[DocumentResponse]
 )
-def get_documents(
+async def get_documents(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -240,7 +240,7 @@ def get_documents(
     "/{document_id}",
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_document(
+async def delete_document(
     document_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

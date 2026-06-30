@@ -12,7 +12,7 @@ from backend.app.services.vector_store import vector_store
 from backend.app.utils.text_cleaner import clean_text
 
 
-def ingest_document(
+async def ingest_document(
     file_path: str,
     document_id: str,
     user_id: str,
@@ -129,7 +129,7 @@ def ingest_document(
     print("[INGESTION] Final clean chunks:", len(clean_chunks))
 
     if clean_chunks:
-        vector_store.add_documents(clean_chunks)
+        await vector_store.aadd_documents(clean_chunks)
 
     print("=" * 60)
     print(

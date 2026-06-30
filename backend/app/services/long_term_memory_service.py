@@ -191,7 +191,7 @@ class LongTermMemoryService:
     # Conversation summary generation
     # ---------------------------------------------------------
     @staticmethod
-    def upsert_conversation_summary(
+    async def upsert_conversation_summary(
         db: Session,
         conversation_id: UUID,
         user_id: UUID,
@@ -230,7 +230,7 @@ Conversation:
 {conversation_text}
 """
 
-        response = llm.invoke(summary_prompt)
+        response = await llm.ainvoke(summary_prompt)
 
         raw_summary = getattr(response, "content", "") or ""
         summary_text = LongTermMemoryService.clean_text(raw_summary)
@@ -267,7 +267,7 @@ Conversation:
     # Durable memory extraction
     # ---------------------------------------------------------
     @staticmethod
-    def extract_and_store_memories(
+    async def extract_and_store_memories(
         db: Session,
         conversation_id: UUID,
         user_id: UUID,
@@ -311,7 +311,7 @@ Conversation:
 {conversation_text}
 """
 
-        response = llm.invoke(extraction_prompt)
+        response = await llm.ainvoke(extraction_prompt)
         raw_output = getattr(response, "content", "") or ""
         raw_output = LongTermMemoryService.clean_text(raw_output)
 
