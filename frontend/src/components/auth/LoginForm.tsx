@@ -1,5 +1,6 @@
 "use client";
 
+import { onboardingService } from "@/services/onboarding.service";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -42,13 +43,22 @@ export default function LoginForm() {
           password,
         });
 
-      setToken(
-        response.access_token
-      );
+      setToken(response.access_token);
 
-      router.replace(
-        "/dashboard"
-      );
+      try {
+        await onboardingService.getMe();
+
+        // Onboarding already exists
+        router.replace("/dashboard");
+      } catch (error: any) {
+        // If onboarding is not found, send new users there
+        if (error?.response?.status === 404) {
+          router.replace("/onboarding");
+        } else {
+          console.error(error);
+          alert("Unable to verify onboarding status.");
+        }
+      }
     } catch (error) {
       console.error(error);
 
@@ -141,7 +151,7 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="h-14 w-full rounded-xl bg-gradient-to-r from-violet-600 to-purple-400 text-lg font-semibold text-white shadow-lg transition hover:scale-[1.02]"
+        className="h-14 w-full rounded-xl bg-linear-to-r from-violet-600 to-purple-400 text-lg font-semibold text-white shadow-lg transition hover:scale-[1.02]"
       >
         {loading
           ? "Signing In..."

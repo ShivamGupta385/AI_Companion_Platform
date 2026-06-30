@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
 import {
   Calendar,
   GraduationCap,
@@ -16,20 +15,16 @@ import { onboardingService } from "@/services/onboarding.service";
 export default function OnboardingForm() {
   const router = useRouter();
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
+  const [isUpdate, setIsUpdate] = useState(false);
 
-  const [isUpdate, setIsUpdate] =
-    useState(false);
-
-  const [formData, setFormData] =
-    useState({
-      age: "",
-      occupation: "",
-      country: "",
-      goals: "",
-      interests: "",
-    });
+  const [formData, setFormData] = useState({
+    age: "",
+    occupation: "",
+    country: "",
+    goals: "",
+    interests: "",
+  });
 
   useEffect(() => {
     loadOnboarding();
@@ -37,30 +32,30 @@ export default function OnboardingForm() {
 
   const loadOnboarding = async () => {
     try {
-      const data =
-        await onboardingService.getMe();
+      const data = await onboardingService.getMe();
 
-      const baseline =
-        data.baseline_data;
+      const baseline = data.baseline_data;
 
       setFormData({
-        age: String(
-          baseline.age || ""
-        ),
-        occupation:
-          baseline.occupation || "",
-        country:
-          baseline.country || "",
-        goals:
-          baseline.goals || "",
-        interests:
-          baseline.interests || "",
+        age: String(baseline.age || ""),
+        occupation: baseline.occupation || "",
+        country: baseline.country || "",
+        goals: baseline.goals || "",
+        interests: baseline.interests || "",
       });
 
       setIsUpdate(true);
 
-    } catch {
-      setIsUpdate(false);
+    } catch (error: any) {
+
+      if (error.response?.status === 404) {
+        // New user (no onboarding yet)
+        setIsUpdate(false);
+      } else {
+        console.error(error);
+        alert("Unable to load your profile.");
+      }
+
     }
   };
 
@@ -69,8 +64,7 @@ export default function OnboardingForm() {
   ) => {
     setFormData({
       ...formData,
-      [e.target.name]:
-        e.target.value,
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -85,31 +79,24 @@ export default function OnboardingForm() {
       const payload = {
         baseline_data: {
           age: Number(formData.age),
-          occupation:
-            formData.occupation,
-          country:
-            formData.country,
-          goals:
-            formData.goals,
-          interests:
-            formData.interests,
+          occupation: formData.occupation,
+          country: formData.country,
+          goals: formData.goals,
+          interests: formData.interests,
         },
       };
 
       if (isUpdate) {
-        await onboardingService.update(
-          payload
-        );
+        await onboardingService.update(payload);
       } else {
-        await onboardingService.create(
-          payload
-        );
+        await onboardingService.create(payload);
       }
 
       router.replace("/dashboard");
 
     } catch (error) {
       console.error(error);
+      alert("Unable to save your profile.");
     } finally {
       setLoading(false);
     }
@@ -184,7 +171,7 @@ export default function OnboardingForm() {
         className="
           w-full
           rounded-2xl
-          bg-gradient-to-r
+          bg-linear-to-r
           from-violet-600
           to-purple-400
           py-4
@@ -199,7 +186,6 @@ export default function OnboardingForm() {
           ? "Update Profile →"
           : "Create Profile →"}
       </button>
-
     </form>
   );
 }

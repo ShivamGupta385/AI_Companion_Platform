@@ -9,7 +9,7 @@ import {
   Bot,
   MessageCircle,
   Radio,
-  LogOut,
+  FolderOpen,
 } from "lucide-react";
 
 import { useAuthStore } from "@/store/auth-store";
@@ -18,7 +18,6 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const {
-    logout,
     user,
     fetchCurrentUser,
   } = useAuthStore();
@@ -26,11 +25,6 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
-
-  const handleLogout = () => {
-    logout();
-    router.replace("/login");
-  };
 
   const displayName =
     user?.full_name ||
@@ -248,8 +242,8 @@ export default function DashboardPage() {
         {/* FEATURE CARDS */}
         <div className="grid lg:grid-cols-3 gap-6 mt-8">
           {/* ONBOARDING */}
-          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-[560px]">
-            <div className="h-[220px] flex items-center justify-center">
+          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-140">
+            <div className="h-55 flex items-center justify-center">
               <Image
                 src="/dashboard/onboarding.png"
                 alt="onboarding"
@@ -263,7 +257,7 @@ export default function DashboardPage() {
               User Insights
             </h2>
 
-            <p className="mt-3 text-slate-500 flex-grow">
+            <p className="mt-3 text-slate-500 grow">
               Complete or update your personal profile information.
             </p>
 
@@ -273,7 +267,7 @@ export default function DashboardPage() {
                 mt-6
                 w-full
                 rounded-2xl
-                bg-gradient-to-r
+                bg-linear-to-r
                 from-violet-600
                 to-purple-400
                 py-4
@@ -286,8 +280,8 @@ export default function DashboardPage() {
           </div>
 
           {/* COMPANIONS */}
-          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-[560px]">
-            <div className="h-[220px] flex items-center justify-center">
+          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-140">
+            <div className="h-55 flex items-center justify-center">
               <Image
                 src="/dashboard/robot.png"
                 alt="companion"
@@ -301,7 +295,7 @@ export default function DashboardPage() {
               AI Companions
             </h2>
 
-            <p className="mt-3 text-slate-500 flex-grow">
+            <p className="mt-3 text-slate-500 grow">
               Explore and chat with specialized AI companions.
             </p>
 
@@ -311,7 +305,7 @@ export default function DashboardPage() {
                 mt-6
                 w-full
                 rounded-2xl
-                bg-gradient-to-r
+                bg-linear-to-r
                 from-violet-600
                 to-purple-400
                 py-4
@@ -323,35 +317,39 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* LOGOUT */}
-          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-[560px]">
-            <div className="h-[220px] flex items-center justify-center">
+          {/* SHARED DOCUMENTS */}
+          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-140">
+
+            <div className="h-55 items-center justify-center">
+
               <Image
-                src="/dashboard/logout.png"
-                alt="Logout"
+                src="/dashboard/documents.png"
+                alt="Shared Documents"
                 width={320}
                 height={220}
                 className="object-contain"
               />
+
             </div>
 
             <h2 className="mt-4 text-3xl font-semibold text-slate-900">
-              Logout
+              Manage Documents →
             </h2>
 
-            <p className="mt-3 text-slate-500 flex-grow">
-              Securely sign out from your AGIX account.
+            <p className="mt-3 text-slate-500 grow">
+              Upload, manage, and search your documents using Vector RAG
+              and Knowledge Graph powered semantic search.
             </p>
 
             <button
-              onClick={handleLogout}
+              onClick={() => router.push("/documents")}
               className="
                 mt-6
                 w-full
                 rounded-2xl
-                bg-gradient-to-r
-                from-orange-500
-                to-red-500
+                bg-linear-to-r
+                from-emerald-500
+                to-cyan-500
                 py-4
                 text-white
                 font-semibold
@@ -361,8 +359,8 @@ export default function DashboardPage() {
                 gap-2
               "
             >
-              <LogOut size={18} />
-              Logout
+              <FolderOpen size={20} />
+              Manage Documents →
             </button>
           </div>
         </div>

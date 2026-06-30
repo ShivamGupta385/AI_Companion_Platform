@@ -26,7 +26,7 @@ export default function RegisterPage() {
             <p>experience ✨</p>
           </div>
 
-          <div className="absolute h-[650px] w-[650px] rounded-full bg-violet-200 opacity-30" />
+          <div className="absolute h-162.5 w-162.5 rounded-full bg-violet-200 opacity-30" />
 
           <Image
             src="/register/register.png"
@@ -46,7 +46,7 @@ export default function RegisterPage() {
 
             <div className="mb-8 text-center">
 
-              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-r from-violet-500 to-purple-300 text-4xl text-white">
+              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-r from-violet-500 to-purple-300 text-4xl text-white">
                 🤖
               </div>
 

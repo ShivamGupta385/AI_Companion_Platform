@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuthStore } from "@/store/auth-store";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -15,6 +16,7 @@ import { authService } from "@/services/auth.service";
 
 export default function RegisterForm() {
   const router = useRouter();
+  const { setToken } = useAuthStore();
 
   const [showPassword, setShowPassword] =
     useState(false);
@@ -47,11 +49,19 @@ export default function RegisterForm() {
     try {
       setLoading(true);
 
-      await authService.register(
-        formData
-      );
+      await authService.register(formData);
 
-      router.push("/login");
+      // Automatically log the user in
+      const loginResponse = await authService.login({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // Save the token
+      setToken(loginResponse.access_token);
+
+      // Redirect new users to onboarding
+      router.replace("/onboarding");
     } catch (error) {
       console.error(error);
       alert("Registration Failed");
@@ -135,7 +145,7 @@ export default function RegisterForm() {
       <button
         type="submit"
         disabled={loading}
-        className="h-14 w-full rounded-xl bg-gradient-to-r from-violet-600 to-purple-400 text-lg font-semibold text-white shadow-lg"
+        className="h-14 w-full rounded-xl bg-linear-to-r from-violet-600 to-purple-400 text-lg font-semibold text-white shadow-lg"
       >
         {loading
           ? "Creating..."

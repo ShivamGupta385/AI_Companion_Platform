@@ -1,5 +1,9 @@
 import os
 import uuid
+from sqlalchemy import or_
+
+from backend.app.models.knowledge_node import KnowledgeNode
+from backend.app.models.knowledge_edge import KnowledgeEdge
 
 from fastapi import (
     APIRouter,
@@ -210,13 +214,78 @@ def delete_document(
             detail="Document not found"
         )
 
-    if document.file_path and os.path.exists(document.file_path):
-        try:
-            os.remove(document.file_path)
-        except Exception:
-            pass
+    try:
 
-    db.delete(document)
-    db.commit()
+        # ----------------------------------------
+        # Get all graph nodes for this document
+        # ----------------------------------------
 
-    return
+        nodes = (
+            db.query(KnowledgeNode)
+            .filter(
+                KnowledgeNode.source_document_id == document.id
+            )
+            .all()
+        )
+
+        node_ids = [node.id for node in nodes]
+
+        # ----------------------------------------
+        # Delete graph edges first
+        # ----------------------------------------
+
+        if node_ids:
+            (
+                db.query(KnowledgeEdge)
+                .filter(
+                    or_(
+                        KnowledgeEdge.source_node_id.in_(node_ids),
+                        KnowledgeEdge.target_node_id.in_(node_ids)
+                    )
+                )
+                .delete(synchronize_session=False)
+            )
+
+        # ----------------------------------------
+        # Delete graph nodes
+        # ----------------------------------------
+
+        (
+            db.query(KnowledgeNode)
+            .filter(
+                KnowledgeNode.source_document_id == document.id
+            )
+            .delete(synchronize_session=False)
+        )
+
+        # ----------------------------------------
+        # Delete document row
+        # ----------------------------------------
+
+        db.delete(document)
+
+        db.commit()
+
+        # ----------------------------------------
+        # Delete physical file AFTER commit
+        # ----------------------------------------
+
+        if (
+            document.file_path
+            and os.path.exists(document.file_path)
+        ):
+            try:
+                os.remove(document.file_path)
+            except Exception:
+                pass
+
+        return
+
+    except Exception as e:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )

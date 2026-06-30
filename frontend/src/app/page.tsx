@@ -47,8 +47,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#f8f8fc] overflow-hidden relative">
       {/* Background Glow */}
-      <div className="absolute top-20 right-20 w-[500px] h-[500px] bg-violet-300/30 rounded-full blur-[120px]" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-200/30 rounded-full blur-[120px]" />
+      <div className="absolute top-20 right-20 w-125 h-125 bg-violet-300/30 rounded-full blur-[120px]" />
+      <div className="absolute bottom-0 left-0 w-100 h-100 bg-purple-200/30 rounded-full blur-[120px]" />
 
       <div className="relative z-10">
         {/* Navbar */}
@@ -77,7 +77,7 @@ export default function HomePage() {
                 py-3
                 rounded-full
                 text-white
-                bg-gradient-to-r
+                bg-linear-to-r
                 from-violet-600
                 to-purple-500
                 hover:scale-105
@@ -99,7 +99,7 @@ export default function HomePage() {
                 <span
                   className="
                   block
-                  bg-gradient-to-r
+                  bg-linear-to-r
                   from-violet-600
                   to-purple-400
                   bg-clip-text
@@ -125,7 +125,7 @@ export default function HomePage() {
                     rounded-2xl
                     text-white
                     font-semibold
-                    bg-gradient-to-r
+                    bg-linear-to-r
                     from-violet-600
                     to-purple-500
                     hover:scale-105
@@ -165,10 +165,10 @@ export default function HomePage() {
               <div
                 className="
                   absolute
-                  w-[450px]
-                  h-[450px]
+                  w-112.5
+                  h-112.5
                   rounded-full
-                  bg-gradient-to-r
+                  bg-linear-to-r
                   from-violet-300
                   to-purple-300
                   opacity-40
@@ -179,10 +179,10 @@ export default function HomePage() {
                 <div
                   className="
                     absolute
-                    w-[520px]
-                    h-[520px]
+                    w-130
+                    h-130
                     rounded-full
-                    bg-gradient-to-r
+                    bg-linear-to-r
                     from-violet-300
                     to-purple-300
                     opacity-50
@@ -257,7 +257,7 @@ export default function HomePage() {
                   shadow-lg
                   overflow-hidden
                   relative
-                  h-[420px]
+                  h-105
                   hover:-translate-y-2
                   transition-all
                   duration-300
@@ -287,7 +287,7 @@ export default function HomePage() {
                     bottom-0
                     left-0
                     w-full
-                    h-[280px]
+                    h-70
                     object-cover
                   "
                 />

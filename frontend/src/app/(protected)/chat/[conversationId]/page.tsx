@@ -3,11 +3,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import AvatarPlaceholder from "@/components/avatar/AvatarPlaceholder";
 
-// ✅ THE EXPERT FIX: Dynamically import LiveAvatar with SSR disabled
-const LiveAvatar = dynamic(() => import("@/components/avatar/LiveAvatar"), {
-  ssr: false,
-});
+const TavusAvatar = dynamic(
+  () => import("@/components/avatar/TavusAvatar"),
+  {
+    ssr: false,
+  }
+);
+
 
 import { chatService } from "@/services/chat.service";
 import { Message } from "@/types/chat.types";
@@ -26,6 +30,7 @@ interface ChatSendResponse {
 export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
+  const [avatarEnabled, setAvatarEnabled] = useState(false);
 
   const conversationId = params.conversationId as string;
   const [messages, setMessages] = useState<Message[]>([]);
@@ -109,9 +114,17 @@ export default function ChatPage() {
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-6xl mx-auto px-2 py-2">
                 
-                {/* LiveAvatar - Dynamically Loaded */}
+                {/* Tavus Avatar */}
                 <div className="mb-8">
-                  <LiveAvatar lastAssistantMessage={lastAssistantMessage} />
+                  {avatarEnabled ? (
+                      <TavusAvatar
+                          companionId="d4f0430d-d1ac-4080-8272-cb7b38254a51"
+                      />
+                  ) : (
+                      <AvatarPlaceholder
+                          onStart={() => setAvatarEnabled(true)}
+                      />
+                  )}
                 </div>
 
                 {messages.length === 0 ? (
@@ -141,6 +154,7 @@ export default function ChatPage() {
                 <ChatInput
                   loading={loading}
                   onSend={handleSend}
+                  autoSendVoice={true}
                   onDocumentUploaded={(fileName) => console.log("Uploaded:", fileName)}
                 />
               </div>

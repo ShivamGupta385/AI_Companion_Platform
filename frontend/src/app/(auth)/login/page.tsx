@@ -12,7 +12,7 @@ export default function LoginPage() {
 
         <div className="relative hidden lg:flex items-center justify-center overflow-hidden">
 
-          <div className="absolute left-20 top-0 h-72 w-72 rounded-b-full bg-gradient-to-b from-violet-300 to-violet-500 opacity-70" />
+          <div className="absolute left-20 top-0 h-72 w-72 rounded-b-full bg-linear-to-b from-violet-300 to-violet-500 opacity-70" />
 
           <div className="absolute top-20 right-28 h-40 w-40 rounded-full bg-cyan-300 opacity-60" />
 
@@ -38,7 +38,7 @@ export default function LoginPage() {
 
             <div className="mb-10 text-center">
 
-              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-r from-violet-500 to-purple-300 text-3xl text-white">
+              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-r from-violet-500 to-purple-300 text-3xl text-white">
                 🤖
               </div>
 

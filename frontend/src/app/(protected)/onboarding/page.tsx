@@ -1,5 +1,5 @@
 import Image from "next/image";
-import OnboardingForm from "@/components/onboarding/OnboardingForm";
+import OnboardingForm from "../../../components/onboarding/OnboardingForm";
 
 
 export default function OnboardingPage() {
@@ -24,7 +24,7 @@ export default function OnboardingPage() {
         >
           {/* LEFT PANEL */}
 
-          <div className="relative bg-gradient-to-br from-white to-violet-50 p-10">
+          <div className="relative bg-linear-to-br from-white to-violet-50 p-10">
 
             {/* Decorative Shapes */}
 
@@ -66,7 +66,7 @@ export default function OnboardingPage() {
                   h-16
                   w-16
                   rounded-2xl
-                  bg-gradient-to-r
+                  bg-linear-to-r
                   from-violet-600
                   to-purple-400
                   flex
