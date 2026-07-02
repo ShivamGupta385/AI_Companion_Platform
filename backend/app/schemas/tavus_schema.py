@@ -19,3 +19,7 @@ class TavusConversationResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True
     )
+
+
+class TavusSessionCreateRequest(BaseModel):
+    document_ids: Optional[list[str]] = None

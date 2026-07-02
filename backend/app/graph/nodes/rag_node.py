@@ -67,7 +67,10 @@ def rag_node(state):
 
         print("[RAG NODE] CONTEXT LENGTH:", len(context))
         print("[RAG NODE] CONTEXT PREVIEW:")
-        print(context[:500] if context else "No retrieved context")
+        # Encode safely for Windows terminals that may not support all Unicode chars
+        preview = (context[:500] if context else "No retrieved context")
+        safe_preview = preview.encode("ascii", errors="replace").decode("ascii")
+        print(safe_preview)
         print("=" * 60)
 
         return {
@@ -78,7 +81,11 @@ def rag_node(state):
     except Exception as e:
         print("=" * 60)
         print("[RAG NODE ERROR]")
-        print("ERROR:", str(e))
+        print("ERROR:", str(e).encode("ascii", errors="replace").decode("ascii"))
         traceback.print_exc()
         print("=" * 60)
-        raise
+        # Return empty context so the graph can continue rather than crashing
+        return {
+            **state,
+            "retrieved_context": ""
+        }

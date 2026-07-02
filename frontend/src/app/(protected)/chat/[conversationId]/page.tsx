@@ -14,6 +14,7 @@ const TavusAvatar = dynamic(
 
 
 import { chatService } from "@/services/chat.service";
+import { conversationService } from "@/services/conversation.service";
 import { Message } from "@/types/chat.types";
 import ChatWindow from "@/components/chat/ChatWindow";
 import ChatInput from "@/components/chat/ChatInput";
@@ -40,6 +41,9 @@ export default function ChatPage() {
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [selectedDocumentName, setSelectedDocumentName] = useState<string | null>(null);
 
+  const [companionId, setCompanionId] = useState<string | null>(null);
+  const [companionName, setCompanionName] = useState<string | null>(null);
+
   const loadMessages = async () => {
     try {
       const data = await chatService.getMessages(conversationId);
@@ -49,9 +53,20 @@ export default function ChatPage() {
     }
   };
 
+  const loadConversationDetails = async () => {
+    try {
+      const data = await conversationService.getConversation(conversationId);
+      setCompanionId(data.companion_id);
+      setCompanionName(data.companion_name);
+    } catch (error) {
+      console.error("Load conversation details error:", error);
+    }
+  };
+
   useEffect(() => {
     if (conversationId) {
       loadMessages();
+      loadConversationDetails();
     }
   }, [conversationId]);
 
@@ -115,17 +130,29 @@ export default function ChatPage() {
               <div className="max-w-6xl mx-auto px-2 py-2">
                 
                 {/* Tavus Avatar */}
-                <div className="mb-8">
-                  {avatarEnabled ? (
-                      <TavusAvatar
-                          companionId="d4f0430d-d1ac-4080-8272-cb7b38254a51"
-                      />
-                  ) : (
+                {companionName === "Aria" && companionId && (
+                  <div className="mb-8 relative">
+                    {avatarEnabled ? (
+                      <>
+                        <div className="absolute top-4 right-4 z-10">
+                          <button
+                            onClick={() => setAvatarEnabled(false)}
+                            className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold shadow-md transition cursor-pointer"
+                          >
+                            End Video Call
+                          </button>
+                        </div>
+                        <TavusAvatar
+                          companionId={companionId}
+                        />
+                      </>
+                    ) : (
                       <AvatarPlaceholder
-                          onStart={() => setAvatarEnabled(true)}
+                        onStart={() => setAvatarEnabled(true)}
                       />
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
 
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center text-center mt-10">

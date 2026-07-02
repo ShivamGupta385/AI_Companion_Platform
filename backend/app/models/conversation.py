@@ -27,6 +27,11 @@ class Conversation(Base):
         String(50)
     )
 
+    tavus_persona_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True
+    )
+
     started_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now()

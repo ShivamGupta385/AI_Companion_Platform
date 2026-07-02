@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     TAVUS_API_KEY: str
     TAVUS_BASE_URL: str
+    BACKEND_PUBLIC_URL: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

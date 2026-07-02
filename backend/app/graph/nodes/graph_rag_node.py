@@ -81,7 +81,7 @@ def graph_rag_node(state):
         # ---------------------------------------------------------
         # Retrieve graph data
         # ---------------------------------------------------------
-        graph_result = GraphRetrieverService.retrieve_graph_context(
+        graph_result = GraphRetrieverService.retrieve_graph_payload(
             db=db,
             user_id=UUID(user_id),
             query=query,
@@ -90,8 +90,8 @@ def graph_rag_node(state):
         )
 
         graph_context = graph_result.get("graph_context", "")
-        graph_nodes = graph_result.get("graph_nodes", [])
-        graph_edges = graph_result.get("graph_edges", [])
+        graph_nodes = graph_result.get("nodes", [])
+        graph_edges = graph_result.get("edges", [])
 
         # ---------------------------------------------------------
         # Build hybrid context

@@ -32,4 +32,20 @@ export const tavusService = {
 
     return response.data;
   },
+
+  async endSession(conversationId: string) {
+    const token = Cookies.get("token");
+
+    const response = await api.post(
+      `/tavus/session/${conversationId}/end`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return response.data;
+  },
 };
