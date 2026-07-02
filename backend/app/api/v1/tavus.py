@@ -171,6 +171,40 @@ def create_tavus_session(
         db.refresh(conversation)
 
     try:
+        # Automatically update Tavus persona custom LLM base_url pointing to our local active tunnel and conversation ID
+        if companion.tavus_persona_id:
+            try:
+                import requests
+                patch_url = f"{settings.TAVUS_BASE_URL}/v2/personas/{companion.tavus_persona_id}"
+                patch_headers = {
+                    "x-api-key": settings.TAVUS_API_KEY,
+                    "Content-Type": "application/json-patch+json"
+                }
+                completions_base_url = f"{settings.BACKEND_PUBLIC_URL}/tavus/llm/{conversation.id}"
+                
+                patch_payload = [
+                    {
+                        "op": "replace",
+                        "path": "/layers/llm/base_url",
+                        "value": completions_base_url
+                    },
+                    {
+                        "op": "replace",
+                        "path": "/layers/llm/model",
+                        "value": "gpt-4o"
+                    },
+                    {
+                        "op": "replace",
+                        "path": "/layers/llm/api_key",
+                        "value": settings.SECRET_KEY
+                    }
+                ]
+                print(f"[TAVUS PERSONA UPDATE] Patching persona {companion.tavus_persona_id} with base_url: {completions_base_url}")
+                patch_resp = requests.patch(patch_url, headers=patch_headers, json=patch_payload, timeout=10)
+                print(f"[TAVUS PERSONA UPDATE] Status: {patch_resp.status_code}, Response: {patch_resp.text}")
+            except Exception as patch_err:
+                print(f"[TAVUS PERSONA UPDATE ERROR] Failed to patch persona base_url: {patch_err}")
+
         tavus_response = TavusService.create_conversation(
             replica_id=companion.tavus_replica_id,
             persona_id=companion.tavus_persona_id,
@@ -263,8 +297,10 @@ async def tavus_chat_completions(
 
     print("=" * 80)
     print(f"[TAVUS LLM CALLBACK] Received request for conversation: {conversation_id}")
+    print(f"[TAVUS LLM CALLBACK] HEADERS: {dict(request.headers)}")
     print(f"[TAVUS LLM CALLBACK] Payload: {body}")
     print("=" * 80)
+
 
     # 3) Extract user's message
     messages = body.get("messages", [])
@@ -334,11 +370,27 @@ async def tavus_chat_completions(
 
 
     # 4) Load DB session context
-    conversation = (
-        db.query(Conversation)
-        .filter(Conversation.tavus_persona_id == conversation_id)
-        .first()
-    )
+    from uuid import UUID
+    is_uuid = False
+    try:
+        UUID(conversation_id)
+        is_uuid = True
+    except ValueError:
+        pass
+
+    if is_uuid:
+        conversation = (
+            db.query(Conversation)
+            .filter(Conversation.id == conversation_id)
+            .first()
+        )
+    else:
+        conversation = (
+            db.query(Conversation)
+            .filter(Conversation.tavus_persona_id == conversation_id)
+            .first()
+        )
+
 
     if not conversation:
         raise HTTPException(
