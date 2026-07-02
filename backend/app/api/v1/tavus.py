@@ -37,16 +37,11 @@ from openai import OpenAI
 router = APIRouter()
 
 # Initialize the OpenAI client
-# If OPENAI_API_KEY is not configured, fall back to Gemini via OpenAI SDK compatibility
 if settings.OPENAI_API_KEY:
     openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
     DEFAULT_MODEL = "gpt-4o-mini"
 else:
-    openai_client = OpenAI(
-        api_key=settings.GEMINI_API_KEY,
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai"
-    )
-    DEFAULT_MODEL = "gemini-2.5-flash"
+    raise ValueError("OPENAI_API_KEY is not configured in settings")
 
 
 # A simple helper function to run Postgres queries safely
@@ -184,23 +179,19 @@ def create_tavus_session(
                 
                 patch_payload = [
                     {
-                        "op": "replace",
+                        "op": "add",
                         "path": "/layers/llm/base_url",
                         "value": completions_base_url
                     },
                     {
-                        "op": "replace",
-                        "path": "/layers/llm/model",
-                        "value": "gpt-4o"
-                    },
-                    {
-                        "op": "replace",
+                        "op": "add",
                         "path": "/layers/llm/api_key",
                         "value": settings.SECRET_KEY
                     }
                 ]
                 print(f"[TAVUS PERSONA UPDATE] Patching persona {companion.tavus_persona_id} with base_url: {completions_base_url}")
                 patch_resp = requests.patch(patch_url, headers=patch_headers, json=patch_payload, timeout=10)
+                patch_resp.raise_for_status()
                 print(f"[TAVUS PERSONA UPDATE] Status: {patch_resp.status_code}, Response: {patch_resp.text}")
             except Exception as patch_err:
                 print(f"[TAVUS PERSONA UPDATE ERROR] Failed to patch persona base_url: {patch_err}")
@@ -327,7 +318,7 @@ async def tavus_chat_completions(
                 "id": f"chatcmpl-{conversation_id}",
                 "object": "chat.completion.chunk",
                 "created": created_time,
-                "model": "gemini-1.5-pro",
+                "model": "gpt-4o-mini",
                 "choices": [{
                     "index": 0,
                     "delta": {"role": "assistant", "content": ""},
@@ -340,7 +331,7 @@ async def tavus_chat_completions(
                 "id": f"chatcmpl-{conversation_id}",
                 "object": "chat.completion.chunk",
                 "created": created_time,
-                "model": "gemini-1.5-pro",
+                "model": "gpt-4o-mini",
                 "choices": [{
                     "index": 0,
                     "delta": {"content": "Custom LLM configuration test successful."},
@@ -353,7 +344,7 @@ async def tavus_chat_completions(
                 "id": f"chatcmpl-{conversation_id}",
                 "object": "chat.completion.chunk",
                 "created": created_time,
-                "model": "gemini-1.5-pro",
+                "model": "gpt-4o-mini",
                 "choices": [{
                     "index": 0,
                     "delta": {},
@@ -455,13 +446,17 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
 - `user_onboarding` TABLE: Columns are (id, user_id, baseline_data, created_at, updated_at).
   -> Example query: SELECT baseline_data FROM user_onboarding WHERE user_id = '{user_id_str}'
   
-4. Read the SQL results, summarize them into a warm, friendly, conversational spoken response. Do not mention SQL, databases, tables, or UUIDs to the user."""
+4. CRITICAL: If the user asks for their personal information, name, email, subscription plan, or onboarding details, you MUST call the query_database tool. DO NOT guess or say you don't know.
+5. Read the SQL results, summarize them into a warm, friendly, conversational spoken response. Do not mention SQL, databases, tables, or UUIDs to the user."""
 
         # Format chat history for OpenAI
-        # Prepend the system prompt to the messages list
-        chat_messages = [{"role": "system", "content": system_prompt}] + messages
+        # Insert our database system prompt right before the last user message to make it the most prominent system instruction
+        if len(messages) > 0:
+            chat_messages = messages[:-1] + [{"role": "system", "content": system_prompt}] + [messages[-1]]
+        else:
+            chat_messages = [{"role": "system", "content": system_prompt}]
 
-        # Build tools parameters
+        # Build tools parameters with specific column guidance and user UUID injection
         tools = [
             {
                 "type": "function",
@@ -471,13 +466,17 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "sql": {"type": "string", "description": "The SQL SELECT query to run."}
+                            "sql": {
+                                "type": "string", 
+                                "description": f"The SQL SELECT query to run. MUST only select columns listed in the schema. Use 'full_name' instead of 'name'. MUST filter by the current user UUID in the WHERE clause: WHERE user_id = '{user_id_str}' or WHERE id = '{user_id_str}'."
+                            }
                         },
                         "required": ["sql"]
                     }
                 }
             }
         ]
+
 
         async def sse_response_generator():
             import time
@@ -500,57 +499,25 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
             }
             yield f"data: {json.dumps(initial_chunk)}\n\n"
 
-            # Execute the first OpenAI call in a separate thread so it doesn't block the async loop
+            # Execute the first OpenAI call synchronously to preserve thought_signature for tool calling
             def call_openai_first():
                 return openai_client.chat.completions.create(
                     model=DEFAULT_MODEL,
                     messages=chat_messages,
                     tools=tools,
-                    stream=True,
+                    stream=False,
                     tool_choice="auto"
                 )
 
-            stream = await asyncio.to_thread(call_openai_first)
-
-            tool_calls_map = {}
+            resp = await asyncio.to_thread(call_openai_first)
+            msg = resp.choices[0].message
             full_response_text = ""
 
-            for chunk in stream:
-                # Accumulate tool calls if they are present
-                if chunk.choices and chunk.choices[0].delta.tool_calls:
-                    for tc in chunk.choices[0].delta.tool_calls:
-                        idx = tc.index
-                        if idx not in tool_calls_map:
-                            tool_calls_map[idx] = {
-                                "id": tc.id,
-                                "type": "function",
-                                "function": {"name": tc.function.name, "arguments": ""}
-                            }
-                        if tc.function.arguments:
-                            tool_calls_map[idx]["function"]["arguments"] += tc.function.arguments
-
-                # Otherwise stream the assistant's text delta to Tavus
-                elif chunk.choices and chunk.choices[0].delta.content:
-                    content = chunk.choices[0].delta.content
-                    full_response_text += content
-                    chunk_data = {
-                        "id": f"chatcmpl-{conversation_id}",
-                        "object": "chat.completion.chunk",
-                        "created": created_time,
-                        "model": DEFAULT_MODEL,
-                        "choices": [{
-                            "index": 0,
-                            "delta": {"content": content},
-                            "finish_reason": None
-                        }]
-                    }
-                    yield f"data: {json.dumps(chunk_data)}\n\n"
-
             # Check if OpenAI requested database querying
-            if tool_calls_map:
-                tool_call = list(tool_calls_map.values())[0]
-                function_name = tool_call["function"]["name"]
-                arguments_str = tool_call["function"]["arguments"]
+            if msg.tool_calls:
+                tool_call = msg.tool_calls[0]
+                function_name = tool_call.function.name
+                arguments_str = tool_call.function.arguments
                 
                 print(f"[TAVUS Custom LLM] Executing tool: {function_name} with args: {arguments_str}")
                 
@@ -571,30 +538,15 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
                 db_result = await asyncio.to_thread(run_query)
 
                 # Format messages for the second OpenAI call
-                assistant_message = {
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [
-                        {
-                            "id": tool_call["id"],
-                            "type": "function",
-                            "function": {
-                                "name": tool_call["function"]["name"],
-                                "arguments": tool_call["function"]["arguments"]
-                            }
-                        }
-                    ]
-                }
-                tool_message = {
+                # Append the original message object directly to preserve the thought_signature metadata
+                chat_messages.append(msg)
+                chat_messages.append({
                     "role": "tool",
-                    "tool_call_id": tool_call["id"],
+                    "tool_call_id": tool_call.id,
                     "content": db_result
-                }
+                })
 
-                chat_messages.append(assistant_message)
-                chat_messages.append(tool_message)
-
-                # Call OpenAI a second time to speak the database results
+                # Call OpenAI a second time to speak the database results (this can be streamed)
                 def call_openai_second():
                     return openai_client.chat.completions.create(
                         model=DEFAULT_MODEL,
@@ -620,6 +572,24 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
                             }]
                         }
                         yield f"data: {json.dumps(chunk_data)}\n\n"
+            else:
+                # If no tool calls were requested, simply yield the direct text content
+                content = msg.content or ""
+                full_response_text = content
+                
+                chunk_data = {
+                    "id": f"chatcmpl-{conversation_id}",
+                    "object": "chat.completion.chunk",
+                    "created": created_time,
+                    "model": DEFAULT_MODEL,
+                    "choices": [{
+                        "index": 0,
+                        "delta": {"content": content},
+                        "finish_reason": None
+                    }]
+                }
+                yield f"data: {json.dumps(chunk_data)}\n\n"
+
 
             # Save the final assistant response to database
             from backend.app.db.session import SessionLocal

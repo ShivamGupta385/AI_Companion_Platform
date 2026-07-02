@@ -93,4 +93,8 @@ coverage/
 # ==========================
 *.swp
 *.swo
-.agents/
+.agents/
+# ==========================
+# Uploads / Local Debug
+# ==========================
+uploads/

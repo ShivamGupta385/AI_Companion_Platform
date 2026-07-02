@@ -1,8 +1,8 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from backend.app.core.config import settings
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash-lite",
-    google_api_key=settings.GEMINI_API_KEY,
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    openai_api_key=settings.OPENAI_API_KEY,
     temperature=0.7
 )
