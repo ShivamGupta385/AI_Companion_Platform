@@ -123,4 +123,10 @@ dependencies = [
     "zstandard==0.25.0",
     "alembic>=1.18.4",
     "langgraph-checkpoint-postgres>=2.0.24",
+    "anthropic>=0.111.0",
+]
+
+[tool.uv.workspace]
+members = [
+    "mcp-postgres-server",
 ]

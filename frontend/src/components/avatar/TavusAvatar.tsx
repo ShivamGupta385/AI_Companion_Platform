@@ -38,7 +38,7 @@ export default function TavusAvatar({ companionId }: Props) {
 
   if (error) {
     return (
-      <div className="w-full h-[500px] rounded-2xl bg-slate-900 flex flex-col items-center justify-center text-center p-6 shadow-lg">
+      <div className="w-full h-[450px] rounded-2xl bg-slate-900 flex flex-col items-center justify-center text-center p-6 shadow-lg">
         <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mb-3">
           <VideoOff size={24} className="text-slate-500" />
         </div>
@@ -50,17 +50,18 @@ export default function TavusAvatar({ companionId }: Props) {
 
   if (loading) {
     return (
-      <div className="w-full h-[500px] rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
+      <div className="w-full h-[450px] rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
         <p className="text-sm text-slate-400 animate-pulse">Connecting to Avatar...</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-xl relative">
+    // Zero hacks. Just a clean 16:9 box.
+    <div className="w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-xl">
       <iframe
         src={conversationUrl}
-        className="w-full h-full border-none absolute inset-0 origin-center scale-[1.10]"
+        className="w-full h-full border-none"
         allow="microphone; camera; autoplay; display-capture; fullscreen"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
         title="Tavus Avatar"

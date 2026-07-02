@@ -78,80 +78,36 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        # IMPORTANT: Add your Tavus webhook URLs here later if you get CORS errors!
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(
-    auth_router,
-    prefix="/api/v1/auth",
-    tags=["Authentication"],
-)
+# --- AUTH & USERS ---
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(users_router, prefix="/api/v1/users", tags=["Users"])
+app.include_router(user_onboarding_router, prefix="/api/v1/user-onboarding", tags=["User Onboarding"])
 
-app.include_router(
-    users_router,
-    prefix="/api/v1/users",
-    tags=["Users"],
-)
+# --- COMPANIONS & CHAT ---
+app.include_router(companion_router, prefix="/api/v1/companions", tags=["Companions"])
+app.include_router(conversation_router, prefix="/api/v1/conversations", tags=["Conversations"])
+app.include_router(chat_router, prefix="/api/v1/chat", tags=["Chat"])
 
-app.include_router(
-    user_onboarding_router,
-    prefix="/api/v1/user-onboarding",
-    tags=["User Onboarding"],
-)
+# --- UTILITIES ---
+app.include_router(tts.router, prefix="/api/v1/tts", tags=["Text To Speech"])
+app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 
-app.include_router(
-    companion_router,
-    prefix="/api/v1/companions",
-    tags=["Companions"],
-)
+# --- AVATARS ---
+app.include_router(liveavatar_router, prefix="/api/v1/liveavatar", tags=["LiveAvatar"])
+app.include_router(heygen_router, prefix="/api/v1/heygenavatar", tags=["HeyGen Avatar"])
 
-app.include_router(
-    conversation_router,
-    prefix="/api/v1/conversations",
-    tags=["Conversations"],
-)
+# --- TAVUS + MCP INTEGRATION ---
+# NOTE: Because the prefix is /api/v1/tavus, the OpenAI-compatible endpoint 
+# inside tavus.py should be at "/v1/chat/completions" so the final URL becomes:
+# http://localhost:8000/api/v1/tavus/v1/chat/completions
+app.include_router(tavus_router, prefix="/api/v1/tavus", tags=["Tavus Avatar"])
 
-app.include_router(
-    chat_router,
-    prefix="/api/v1/chat",
-    tags=["Chat"],
-)
-
-app.include_router(
-    tts.router,
-    prefix="/api/v1/tts",
-    tags=["Text To Speech"],
-)
-
-app.include_router(
-    documents.router,
-    prefix="/api/v1/documents",
-    tags=["Documents"],
-)
-
-app.include_router(
-    liveavatar_router,
-    prefix="/api/v1/liveavatar",
-    tags=["LiveAvatar"],
-)
-
-app.include_router(
-    heygen_router,
-    prefix="/api/v1/heygenavatar",
-    tags=["HeyGen Avatar"],
-)
-
-app.include_router(
-    tavus_router,
-    prefix="/api/v1/tavus",
-    tags=["Tavus Avatar"],
-)
-
-app.include_router(
-    openai_router,
-    prefix="/api/v1/openai",
-    tags=["OpenAI Compatible API"],
-)
+# --- OPENAI ROUTER ---
+app.include_router(openai_router, prefix="/api/v1/openai", tags=["OpenAI Compatible API"])
