@@ -62,9 +62,10 @@ export default function RegisterForm() {
 
       // Redirect new users to onboarding
       router.replace("/onboarding");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Registration Failed");
+      const errorMessage = error.response?.data?.detail || "Registration Failed";
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }

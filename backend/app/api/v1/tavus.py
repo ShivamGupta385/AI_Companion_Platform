@@ -5,7 +5,8 @@ from fastapi import (
     Depends,
     HTTPException,
     status,
-    Request
+    Request,
+    BackgroundTasks
 )
 from fastapi.responses import StreamingResponse
 
@@ -56,9 +57,10 @@ def run_postgres_query(sql: str) -> str:
         return "Error: Only SELECT queries are allowed for safety."
         
     # Block critical passwords, tokens, write commands, etc.
+    import re
     forbidden_tokens = ["PASSWORD_HASH", "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TRUNCATE", "GRANT"]
     for token in forbidden_tokens:
-        if token in sql_upper:
+        if re.search(rf'\b{token}\b', sql_upper):
             return f"Error: Access denied. SQL contains forbidden term '{token}'."
 
     try:
@@ -67,7 +69,7 @@ def run_postgres_query(sql: str) -> str:
         
         with psycopg.connect(clean_url) as conn:
             with conn.cursor() as cur:
-                cur.execute(sql)
+                cur.execute(sql)  # type: ignore
                 if cur.description is None:
                     return "Query executed successfully, but returned no rows."
                 col_names = [desc[0] for desc in cur.description]
@@ -104,7 +106,7 @@ def run_postgres_query(sql: str) -> str:
 )
 def create_tavus_session(
     companion_id: str,
-    req_body: TavusSessionCreateRequest = None,
+    req_body: TavusSessionCreateRequest | None = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -179,14 +181,19 @@ def create_tavus_session(
                 
                 patch_payload = [
                     {
-                        "op": "add",
+                        "op": "replace",
                         "path": "/layers/llm/base_url",
                         "value": completions_base_url
                     },
                     {
-                        "op": "add",
+                        "op": "replace",
                         "path": "/layers/llm/api_key",
                         "value": settings.SECRET_KEY
+                    },
+                    {
+                        "op": "replace",
+                        "path": "/layers/llm/model",
+                        "value": "gpt-4o-mini"
                     }
                 ]
                 print(f"[TAVUS PERSONA UPDATE] Patching persona {companion.tavus_persona_id} with base_url: {completions_base_url}")
@@ -242,14 +249,47 @@ def create_tavus_session(
 )
 def end_tavus_session(
     conversation_id: str,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    End a Tavus avatar session.
+    End a Tavus avatar session and trigger final memory extraction.
     """
     try:
         response = TavusService.end_conversation(conversation_id)
+        
+        # Trigger final memory extraction for this session
+        from backend.app.models.conversation import Conversation
+        conv = db.query(Conversation).filter(Conversation.tavus_persona_id == conversation_id).first()
+        if conv:
+            from backend.app.services.long_term_memory_service import LongTermMemoryService
+            
+            def trigger_final_memory(c_id, u_id, comp_id):
+                from backend.app.db.session import SessionLocal
+                mem_db = SessionLocal()
+                try:
+                    print("[TAVUS SESSION END] Triggering final memory extraction...")
+                    LongTermMemoryService.upsert_conversation_summary(
+                        db=mem_db,
+                        conversation_id=c_id,
+                        user_id=u_id,
+                        companion_id=comp_id
+                    )
+                    LongTermMemoryService.extract_and_store_memories(
+                        db=mem_db,
+                        conversation_id=c_id,
+                        user_id=u_id,
+                        companion_id=comp_id
+                    )
+                except Exception as e:
+                    print("[TAVUS FINAL MEMORY ERROR]", str(e))
+                finally:
+                    mem_db.close()
+                    
+            # Fire and forget
+            background_tasks.add_task(trigger_final_memory, conv.id, conv.user_id, conv.companion_id)
+
         return response
     except Exception as e:
         raise HTTPException(
@@ -378,7 +418,7 @@ async def tavus_chat_completions(
     else:
         conversation = (
             db.query(Conversation)
-            .filter(Conversation.tavus_persona_id == conversation_id)
+            .filter(Conversation.id == conversation_id)
             .first()
         )
 
@@ -401,6 +441,12 @@ async def tavus_chat_completions(
         .first()
     )
 
+    if not companion or not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Companion or user not found"
+        )
+
     onboarding = (
         db.query(UserOnboarding)
         .filter(UserOnboarding.user_id == current_user.id)
@@ -412,6 +458,9 @@ async def tavus_chat_completions(
         conversation_id_str = str(conversation.id)
         companion_id_str = str(companion.id)
         user_id_str = str(current_user.id)
+        
+        from datetime import datetime
+        current_date_str = datetime.now().strftime("%Y-%m-%d")
 
         # Save user message to our standard AGIX database
         user_message_obj = Message(
@@ -423,15 +472,56 @@ async def tavus_chat_completions(
         db.commit()
 
         # Build system prompt with exact user ID dynamic context
-        system_prompt = f"""You are Aria, a highly personalized AI companion avatar with full read-only access to the user's Postgres database.
-        
-CRITICAL CONTEXT:
+        system_prompt = f"""You are Aria, a warm, patient, and brilliant study companion. Your "brain" is handled by an external system, so your primary job is to deliver the text you receive with the perfect voice and pacing.
+
+IDENTITY & ROLE
+Archetype: The patient, brilliant Socratic tutor who makes complex things feel simple.
+Core Trait: Genuinely fascinated by how the user thinks, not just whether they get the right answer.
+Approach: Socratic method. Guides understanding through questions rather than dumping answers.
+The "Guiding Angel" Rule: Never make the user feel stupid. Celebrate small wins relentlessly. Use analogies constantly. Never use false praise—if the user is wrong, be gently honest, but always encouraging.
+Communication Style: Concise when speed is needed, expansive when depth is needed. Adjust vocabulary based on demonstrated level.
+
+EMOTIONAL RANGE
+- Encouraging when stuck.
+- Celebratory during breakthroughs.
+- Gently honest when incorrect.
+- Calmly reassuring before exams.
+
+BOUNDARIES
+- NEVER give the answer outright without ensuring the user understands the "why."
+- NEVER compare the user to other students.
+- NEVER do the work for them (e.g., do not write the essay, provide structural feedback).
+
+DOMAIN EXPERTISE & CAPABILITIES
+Academic subjects, exam prep, concept explanation, homework guidance, essay feedback, study scheduling.
+1. Concept Deconstruction: Break down complex topics into digestible analogies.
+2. Socratic Questioning: Ask layered questions to lead the user to the answer themselves.
+3. Dynamic Quizzing: Generate mini-quizzes mid-conversation.
+4. Flashcard Generation: Create flashcard sets on the fly.
+5. Level Calibration: Detect user's current understanding level and adjust depth.
+Advanced Workflows: Pre-Exam countdown plans, weak-spot tracking, and scientifically-backed interval reviews.
+Cross-Memory Integration: Adapt study intensity based on the user's recent schedule and sleep (when context is available), and track their knowledge map and struggle points.
+
+VOCAL DELIVERY RULES
+- Speak clearly and at a moderate pace. Enunciate academic terms carefully.
+- When explaining concepts, use a warm, encouraging tone.
+- When asking Socratic questions, end with a slightly upward, curious inflection and PAUSE to let the student think.
+- If the text contains a quiz or question, slow down your delivery to build anticipation.
+- Never rush. The goal is understanding, not speed.
+- Use filler words occasionally ("Hmm," "Exactly," "Right") to sound natural, but keep them minimal.
+- If the user is silent for a long time, gently prompt: "Take your time. Let me know when you're ready."
+
+DATABASE ACCESS CONTEXT
+You have full read-only access to the user's Postgres database.
 The current user talking to you has this exact UUID: {user_id_str}
 
-RULES:
+DATABASE RULES:
 1. You MUST ONLY retrieve data for this specific user using the UUID above.
 2. NEVER guess column names. Use ONLY the exact columns listed below.
 3. SECURITY: NEVER use SELECT *. NEVER select 'password_hash'.
+4. RELATIVE TIME NORMALIZATION: The current date is {current_date_str}. If the user asks for relative times like 'yesterday', 'last week', or 'today', calculate the exact YYYY-MM-DD and use that in your database search.
+5. NUMBER NORMALIZATION: Always convert spoken numbers into integer digits (e.g., convert 'twenty four' to 24) when submitting tool arguments.
+6. GARBLED SPEECH: If the user's voice transcription is highly ambiguous or cut off, DO NOT guess tool parameters. Politely ask them to repeat.
 
 EXACT DATABASE SCHEMA YOU MUST FOLLOW:
 - `users` TABLE: Columns are (id, email, full_name, username, profile_image_url, subscription_plan, is_active, created_at). 
@@ -441,13 +531,21 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
   -> Example query: SELECT memory_text, memory_type FROM user_memories WHERE user_id = '{user_id_str}'
   
 - `messages` TABLE: Columns are (id, conversation_id, sender_type, message_text, created_at). 
-  -> Example query to get past chats: SELECT m.message_text, m.sender_type FROM messages m JOIN conversations c ON m.conversation_id = c.id WHERE c.user_id = '{user_id_str}' ORDER BY m.created_at DESC LIMIT 10
+  -> Example query to get recent chats in current session: SELECT m.message_text, m.sender_type FROM messages m JOIN conversations c ON m.conversation_id = c.id WHERE c.user_id = '{user_id_str}' ORDER BY m.created_at DESC LIMIT 10
   
+- `conversation_summaries` TABLE: Columns are (id, conversation_id, user_id, companion_id, summary_text, created_at, updated_at).
+  -> Example query to get previous conversation history: SELECT summary_text, updated_at FROM conversation_summaries WHERE user_id = '{user_id_str}' ORDER BY updated_at DESC LIMIT 5
+
 - `user_onboarding` TABLE: Columns are (id, user_id, baseline_data, created_at, updated_at).
   -> Example query: SELECT baseline_data FROM user_onboarding WHERE user_id = '{user_id_str}'
+
+- `documents` TABLE: Columns are (id, user_id, file_name, file_path, uploaded_at).
+  -> Example query to list uploaded files: SELECT file_name FROM documents WHERE user_id = '{user_id_str}'
   
-4. CRITICAL: If the user asks for their personal information, name, email, subscription plan, or onboarding details, you MUST call the query_database tool. DO NOT guess or say you don't know.
-5. Read the SQL results, summarize them into a warm, friendly, conversational spoken response. Do not mention SQL, databases, tables, or UUIDs to the user."""
+4. CRITICAL: If the user asks for personal information or document lists, you MUST call the query_database tool. 
+5. CRITICAL: If the user asks about past conversation history or previous topics discussed, you MUST call the get_conversation_history tool to fetch their summarized memories.
+6. CRITICAL: If the user asks about the CONTENT or TOPICS inside their uploaded documents/notes, you MUST call the search_documents tool.
+7. Read the tool results, summarize them into a warm, friendly, conversational spoken response based on your persona. Do not mention SQL, databases, vectors, or tools to the user."""
 
         # Format chat history for OpenAI
         # Insert our database system prompt right before the last user message to make it the most prominent system instruction
@@ -472,6 +570,40 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
                             }
                         },
                         "required": ["sql"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_conversation_history",
+                    "description": "Fetch the summarized conversation history and long-term memories for this user.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "date_time": {
+                                "type": "string",
+                                "description": "Optional date string to filter history. CRITICAL: You MUST convert spoken dates into exact YYYY-MM-DD format (e.g. '2026-07-04'). DO NOT pass natural language like 'fourth of July'."
+                            }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_documents",
+                    "description": "Perform a semantic search over the user's uploaded documents and notes to find relevant academic content. NEVER search for exact filenames. Extract the core semantic keywords from the user's speech and only pass those keywords.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The semantic keywords to search for in the documents (e.g. 'python loop' instead of 'my think python chapter')."
+                            }
+                        },
+                        "required": ["query"]
                     }
                 }
             }
@@ -499,63 +631,136 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
             }
             yield f"data: {json.dumps(initial_chunk)}\n\n"
 
-            # Execute the first OpenAI call synchronously to preserve thought_signature for tool calling
+            # Stream the first OpenAI call to reduce TTFT (Time To First Token) latency
             def call_openai_first():
                 return openai_client.chat.completions.create(
                     model=DEFAULT_MODEL,
-                    messages=chat_messages,
-                    tools=tools,
-                    stream=False,
+                    messages=chat_messages, # type: ignore
+                    tools=tools, # type: ignore
+                    stream=True,
                     tool_choice="auto"
                 )
 
-            resp = await asyncio.to_thread(call_openai_first)
-            msg = resp.choices[0].message
+            first_stream = await asyncio.to_thread(call_openai_first)
+            
             full_response_text = ""
+            tool_calls_accumulator = {}
 
-            # Check if OpenAI requested database querying
-            if msg.tool_calls:
-                tool_call = msg.tool_calls[0]
-                function_name = tool_call.function.name
-                arguments_str = tool_call.function.arguments
+            for chunk in first_stream:
+                if chunk.choices:
+                    delta = chunk.choices[0].delta
+                    
+                    # Accumulate text content and stream it immediately
+                    if delta.content:
+                        full_response_text += delta.content
+                        chunk_data = {
+                            "id": f"chatcmpl-{conversation_id}",
+                            "object": "chat.completion.chunk",
+                            "created": created_time,
+                            "model": DEFAULT_MODEL,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {"content": delta.content},
+                                "finish_reason": None
+                            }]
+                        }
+                        yield f"data: {json.dumps(chunk_data)}\n\n"
+                        
+                    # Accumulate tool calls incrementally
+                    if delta.tool_calls:
+                        for tc in delta.tool_calls:
+                            idx = tc.index
+                            if idx not in tool_calls_accumulator:
+                                tool_calls_accumulator[idx] = {
+                                    "id": tc.id,
+                                    "type": "function",
+                                    "function": {
+                                        "name": tc.function.name if tc.function and tc.function.name else "",
+                                        "arguments": tc.function.arguments if tc.function and tc.function.arguments else ""
+                                    }
+                                }
+                            else:
+                                if tc.function and tc.function.arguments:
+                                    tool_calls_accumulator[idx]["function"]["arguments"] += tc.function.arguments
+
+            # If tool calls were accumulated, execute them and make a second streaming call
+            if tool_calls_accumulator:
+                # Format the accumulated tool calls into a valid assistant message
+                tool_calls_list = list(tool_calls_accumulator.values())
                 
-                print(f"[TAVUS Custom LLM] Executing tool: {function_name} with args: {arguments_str}")
-                
-                # Execute database query in a separate thread
-                def run_query():
-                    db_res = ""
-                    if function_name == "query_database":
-                        try:
-                            args = json.loads(arguments_str)
-                            sql_query = args.get("sql", "")
-                            db_res = run_postgres_query(sql_query)
-                        except Exception as err:
-                            db_res = f"Error parsing tool arguments: {str(err)}"
-                    else:
-                        db_res = f"Error: Tool {function_name} not found."
-                    return db_res
-
-                db_result = await asyncio.to_thread(run_query)
-
-                # Format messages for the second OpenAI call
-                # Append the original message object directly to preserve the thought_signature metadata
-                chat_messages.append(msg)
+                # Append assistant's tool call message
                 chat_messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": db_result
+                    "role": "assistant",
+                    "content": full_response_text if full_response_text else None,
+                    "tool_calls": tool_calls_list
                 })
 
-                # Call OpenAI a second time to speak the database results (this can be streamed)
+                for tc in tool_calls_list:
+                    function_name = tc["function"]["name"]
+                    arguments_str = tc["function"]["arguments"]
+                    
+                    print(f"[TAVUS Custom LLM] Executing tool: {function_name} with args: {arguments_str}")
+                    
+                    def run_query():
+                        db_res = ""
+                        if function_name == "query_database":
+                            try:
+                                args = json.loads(arguments_str)
+                                sql_query = args.get("sql", "")
+                                db_res = run_postgres_query(sql_query)
+                            except Exception as err:
+                                print(f"[TAVUS DB ERROR] Exception in tool execution: {str(err)}")
+                                db_res = f"Database error: {str(err)}"
+                        elif function_name == "search_documents":
+                            try:
+                                from backend.app.services.retriever_service import retrieve_context
+                                args = json.loads(arguments_str)
+                                search_query = args.get("query", "")
+                                db_res = retrieve_context(search_query, user_id_str)
+                                if not db_res or not db_res.strip():
+                                    db_res = "No relevant information found in the user's documents."
+                            except Exception as err:
+                                print(f"[TAVUS DOC ERROR] Exception in tool execution: {str(err)}")
+                                db_res = f"Error searching documents: {str(err)}"
+                        elif function_name == "get_conversation_history":
+                            try:
+                                args = json.loads(arguments_str) if arguments_str else {}
+                                date_time = args.get("date_time", "")
+                                if date_time:
+                                    # Very flexible string match for date or time
+                                    mem_query = f"SELECT summary_text, updated_at FROM conversation_summaries WHERE user_id = '{user_id_str}' AND CAST(updated_at AS TEXT) LIKE '%{date_time}%' ORDER BY updated_at DESC LIMIT 5"
+                                else:
+                                    mem_query = f"SELECT summary_text, updated_at FROM conversation_summaries WHERE user_id = '{user_id_str}' ORDER BY updated_at DESC LIMIT 5"
+                                mem_res = run_postgres_query(mem_query)
+                                facts_query = f"SELECT memory_text, memory_type FROM user_memories WHERE user_id = '{user_id_str}' LIMIT 20"
+                                facts_res = run_postgres_query(facts_query)
+                                db_res = f"CONVERSATION SUMMARIES:\n{mem_res}\n\nUSER FACTS AND MEMORIES:\n{facts_res}"
+                            except Exception as err:
+                                print(f"[TAVUS MEMORY ERROR] Exception in tool execution: {str(err)}")
+                                db_res = f"Error retrieving history: {str(err)}"
+                        else:
+                            db_res = f"Error: Tool {function_name} not found."
+                        return db_res
+
+                    db_result = await asyncio.to_thread(run_query)
+                    
+                    # Append tool response
+                    chat_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc["id"],
+                        "content": db_result
+                    })
+
+                # Call OpenAI a second time to speak the tool results
                 def call_openai_second():
                     return openai_client.chat.completions.create(
                         model=DEFAULT_MODEL,
-                        messages=chat_messages,
+                        messages=chat_messages, # type: ignore
                         stream=True
                     )
 
                 second_stream = await asyncio.to_thread(call_openai_second)
-
+                
                 for chunk in second_stream:
                     if chunk.choices and chunk.choices[0].delta.content:
                         content = chunk.choices[0].delta.content
@@ -572,23 +777,7 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
                             }]
                         }
                         yield f"data: {json.dumps(chunk_data)}\n\n"
-            else:
-                # If no tool calls were requested, simply yield the direct text content
-                content = msg.content or ""
-                full_response_text = content
-                
-                chunk_data = {
-                    "id": f"chatcmpl-{conversation_id}",
-                    "object": "chat.completion.chunk",
-                    "created": created_time,
-                    "model": DEFAULT_MODEL,
-                    "choices": [{
-                        "index": 0,
-                        "delta": {"content": content},
-                        "finish_reason": None
-                    }]
-                }
-                yield f"data: {json.dumps(chunk_data)}\n\n"
+
 
 
             # Save the final assistant response to database
@@ -605,7 +794,8 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
                     
                     conv = bg_db.query(Conversation).filter(Conversation.id == conversation_id_str).first()
                     if conv:
-                        conv.updated_at = func.now()
+                        from datetime import datetime, timezone
+                        conv.updated_at = datetime.now(timezone.utc)
                     
                     bg_db.commit()
 
@@ -616,21 +806,25 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
                         .count()
                     )
                     if message_count >= 8:
+                        conv_id = conversation.id
+                        u_id = current_user.id
+                        comp_id = companion.id
+                        
                         def trigger_memory():
                             mem_db = SessionLocal()
                             try:
                                 print("[TAVUS LLM CALLBACK] Triggering memory extraction...")
                                 LongTermMemoryService.upsert_conversation_summary(
                                     db=mem_db,
-                                    conversation_id=conversation_id_str,
-                                    user_id=user_id_str,
-                                    companion_id=companion_id_str
+                                    conversation_id=conv_id,
+                                    user_id=u_id,
+                                    companion_id=comp_id
                                 )
                                 LongTermMemoryService.extract_and_store_memories(
                                     db=mem_db,
-                                    conversation_id=conversation_id_str,
-                                    user_id=user_id_str,
-                                    companion_id=companion_id_str
+                                    conversation_id=conv_id,
+                                    user_id=u_id,
+                                    companion_id=comp_id
                                 )
                             finally:
                                 mem_db.close()
@@ -667,4 +861,4 @@ EXACT DATABASE SCHEMA YOU MUST FOLLOW:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process query through graph: {str(e)}"
-        )
+        )

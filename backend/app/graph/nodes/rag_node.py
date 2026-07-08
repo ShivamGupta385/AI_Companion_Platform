@@ -59,8 +59,13 @@ def rag_node(state):
         print("=" * 60)
         print("[RAG NODE] Running retrieval")
         print("QUERY:", query)
-
-        context = retrieve_context(query)
+        
+        user_id = state.get("user_id")
+        if not user_id:
+            print("[RAG NODE ERROR] Missing user_id")
+            context = ""
+        else:
+            context = retrieve_context(query, user_id=str(user_id))
 
         if context is None:
             context = ""

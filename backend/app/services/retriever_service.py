@@ -12,14 +12,19 @@ retriever = vector_store.as_retriever(
 
 
 def retrieve_context(
-    query: str
+    query: str,
+    user_id: str
 ):
-
-    documents = retriever.invoke(
-        query
-    )
-
-    return "\n\n".join(
-        doc.page_content
-        for doc in documents
-    )
+    try:
+        documents = vector_store.similarity_search(
+            query,
+            k=5,
+            filter={"user_id": user_id}
+        )
+        return "\n\n".join(
+            doc.page_content
+            for doc in documents
+        )
+    except Exception as e:
+        print(f"[RETRIEVER ERROR] {e}")
+        return ""

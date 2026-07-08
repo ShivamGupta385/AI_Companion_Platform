@@ -40,14 +40,24 @@ def register_user(
     db: Session = Depends(get_db)
 ):
 
-    existing_user = db.query(User).filter(
+    existing_email = db.query(User).filter(
         User.email == user_data.email
     ).first()
 
-    if existing_user:
+    if existing_email:
         raise HTTPException(
             status_code=400,
             detail="Email already registered"
+        )
+
+    existing_username = db.query(User).filter(
+        User.username == user_data.username
+    ).first()
+
+    if existing_username:
+        raise HTTPException(
+            status_code=400,
+            detail="Username already taken"
         )
 
     user = User(

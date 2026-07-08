@@ -302,13 +302,13 @@ export default function TavusAvatar({
           <audio ref={audioRef} autoPlay />
 
           {/* Local User Video (Picture-in-Picture) */}
-          <div className={`absolute top-24 right-6 w-36 h-48 bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10 z-20 transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-40"}`}>
+          <div className={`absolute top-24 right-6 w-64 h-36 bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-white/10 z-20 transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-40"}`}>
             <video 
               ref={localVideoRef}
               autoPlay 
               playsInline
               muted
-              className={`w-full h-full object-cover transition-opacity duration-300 ${isCameraOn ? 'opacity-100' : 'opacity-0'}`}
+              className={`w-full h-full object-cover -scale-x-100 transition-opacity duration-300 ${isCameraOn ? 'opacity-100' : 'opacity-0'}`}
             />
             {!isCameraOn && (
               <div className="absolute inset-0 flex items-center justify-center text-gray-500 bg-gray-800">
