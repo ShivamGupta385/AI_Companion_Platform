@@ -25,8 +25,28 @@ MEMORY_QUERY_KEYWORDS = [
 ]
 
 
+CASUAL_CHAT_KEYWORDS = [
+    "hi",
+    "hello",
+    "hey",
+    "how are you",
+    "what's up",
+    "good morning",
+    "good evening",
+    "bye",
+    "see ya",
+    "thanks",
+    "thank you",
+    "cool",
+    "awesome"
+]
+
 def is_memory_query(query: str) -> bool:
     query_lower = query.lower().strip()
+    
+    if query_lower in CASUAL_CHAT_KEYWORDS:
+        return True
+
     return any(keyword in query_lower for keyword in MEMORY_QUERY_KEYWORDS)
 
 

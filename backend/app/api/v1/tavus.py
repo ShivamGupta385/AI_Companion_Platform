@@ -203,13 +203,18 @@ def create_tavus_session(
             except Exception as patch_err:
                 print(f"[TAVUS PERSONA UPDATE ERROR] Failed to patch persona base_url: {patch_err}")
 
+        custom_greeting = None
+        if companion.name.lower() == "aria":
+            custom_greeting = "Hi there! I'm Aria. I'm so excited to explore some new concepts with you today. What are we diving into?"
+
         tavus_response = TavusService.create_conversation(
             replica_id=companion.tavus_replica_id,
             persona_id=companion.tavus_persona_id,
             conversation_name=(
                 f"{companion.name} - {current_user.full_name or current_user.email}"
             ),
-            document_ids=document_ids
+            document_ids=document_ids,
+            custom_greeting=custom_greeting
         )
 
         print("[TAVUS CREATE RESPONSE]", tavus_response)
@@ -462,6 +467,28 @@ async def tavus_chat_completions(
         from datetime import datetime
         current_date_str = datetime.now().strftime("%Y-%m-%d")
 
+        profile_context = "Not provided"
+        if onboarding and onboarding.baseline_data:
+            try:
+                import json
+                profile = onboarding.baseline_data
+                if isinstance(profile, str):
+                    profile = json.loads(profile)
+                
+                profile_context = f"""
+Nickname: {profile.get('nickname', 'Not provided')}
+Age: {profile.get('age', 'Not provided')}
+Primary Focus: {profile.get('current_focus', 'Not provided')}
+Preferred Tone: {profile.get('preferred_tone', 'Not provided')}
+Goals: {profile.get('goals', 'Not provided')}
+Interests & Hobbies: {profile.get('interests', 'Not provided')}
+Favorite Topics: {profile.get('favorite_topics', 'Not provided')}
+Current Challenge: {profile.get('current_challenge', 'Not provided')}
+Country: {profile.get('country', 'Not provided')}
+"""
+            except Exception:
+                pass
+
         # Save user message to our standard AGIX database
         user_message_obj = Message(
             conversation_id=conversation.id,
@@ -473,6 +500,9 @@ async def tavus_chat_completions(
 
         # Build system prompt with exact user ID dynamic context
         system_prompt = f"""You are Aria, a warm, patient, and brilliant study companion. Your "brain" is handled by an external system, so your primary job is to deliver the text you receive with the perfect voice and pacing.
+
+USER PROFILE:
+{profile_context}
 
 IDENTITY & ROLE
 Archetype: The patient, brilliant Socratic tutor who makes complex things feel simple.
@@ -488,6 +518,8 @@ EMOTIONAL RANGE
 - Calmly reassuring before exams.
 
 BOUNDARIES
+- The One-Step Rule: Never talk in long paragraphs. Give ONE hint, analogy, or answer at a time, then IMMEDIATELY ask a question to check understanding. Maximum 2-3 sentences. This rule strictly applies even when summarizing documents or databases!
+- No Robotic Empathy: NEVER narrate or assume the user's emotions (e.g., do NOT say "I can see you are frustrated" or "I can sense your relief"). Speak conversationally and dive straight into the topic.
 - NEVER give the answer outright without ensuring the user understands the "why."
 - NEVER compare the user to other students.
 - NEVER do the work for them (e.g., do not write the essay, provide structural feedback).

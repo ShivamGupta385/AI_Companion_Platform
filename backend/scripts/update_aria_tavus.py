@@ -2,8 +2,8 @@ from backend.app.db.session import SessionLocal
 from backend.app.models.companion import Companion
 
 # Replace these with your FULL IDs from Tavus
-FACE_ID = "r291e545fd67"
-PAL_ID = "p4ee119868ef"
+FACE_ID = "rfc63eab317e"
+PAL_ID = "p7a2f792c2ba"
 
 db = SessionLocal()
 

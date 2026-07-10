@@ -202,24 +202,38 @@ export default function TavusAvatar({
       if (document.fullscreenElement) {
         await document.exitFullscreen().catch(console.error);
       }
-      if (callObject) {
-        await callObject.leave();
-        await callObject.destroy();
-        setCallObject(null);
+      
+      // Attempt backend API call but don't let it block UI teardown
+      try {
+        await tavusService.endSession(currentConversationId);
+      } catch (backendErr) {
+        console.warn("Backend end session failed or already ended:", backendErr);
       }
-      await tavusService.endSession(currentConversationId);
+
+      // Hide UI immediately
       setSessionActive(false);
       setCurrentConversationId("");
       setIsMicOn(true);
       setIsCameraOn(true);
       setAgentState("listening");
       
+      // Cleanup Daily call object safely
+      if (callObject) {
+        try {
+          await callObject.leave();
+          await callObject.destroy();
+        } catch (dailyErr) {
+          console.warn("Daily call object cleanup warning:", dailyErr);
+        }
+        setCallObject(null);
+      }
+      
       // Clear media streams
       if (videoRef.current) videoRef.current.srcObject = null;
       if (audioRef.current) audioRef.current.srcObject = null;
       if (localVideoRef.current) localVideoRef.current.srcObject = null;
     } catch (err) {
-      console.error(err);
+      console.error("Critical error in handleEndConversation:", err);
     } finally {
       setLoading(false);
     }
