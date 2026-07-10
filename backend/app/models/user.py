@@ -47,6 +47,20 @@ class User(Base):
         default=True
     )
 
+    study_streak_count: Mapped[int] = mapped_column(
+        default=0
+    )
+
+    last_study_date: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    upcoming_exam: Mapped[DateTime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now()

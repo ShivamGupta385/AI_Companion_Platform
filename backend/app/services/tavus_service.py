@@ -17,7 +17,8 @@ class TavusService:
         persona_id: Optional[str] = None,
         conversation_name: Optional[str] = None,
         document_ids: Optional[list[str]] = None,
-        custom_greeting: Optional[str] = None
+        custom_greeting: Optional[str] = None,
+        conversational_context: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create a Tavus conversation/session.
@@ -40,6 +41,9 @@ class TavusService:
             
         if custom_greeting:
             payload["custom_greeting"] = custom_greeting
+            
+        if conversational_context:
+            payload["conversational_context"] = conversational_context
 
         # Removed timeouts per user request
 

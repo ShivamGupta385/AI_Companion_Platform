@@ -188,22 +188,24 @@ Conversation:
             return []
 
         extraction_prompt = f"""
-You are extracting durable long-term user memories for an AI companion.
+You are extracting durable long-term user memories for an AI companion (specifically a study tutor named Aria).
 
 From the conversation below, extract ONLY information that is useful in future conversations.
 
-Keep memories only if they are stable or important, such as:
-- user project context
-- ongoing work
-- learning goals
-- important preferences
-- repeated interests
-- future tasks or commitments
+Extract memories into the following classifications:
+- academic_weak_spot (e.g., struggles with derivatives, doesn't understand history dates)
+- academic_strength (e.g., good at visual analogies, strong in algebra)
+- learning_style (e.g., visual learner, needs Socratic questioning)
+- conversation_insight (e.g., user project context, future tasks, general preferences)
 
 Do NOT include temporary small talk.
 
-Return each memory as a short bullet point.
-Keep each memory concise and factual.
+Return each memory strictly in this format:
+[TYPE] Memory text here
+
+Example:
+[academic_weak_spot] User struggles with understanding the concept of derivatives.
+[learning_style] User prefers driving analogies to understand math concepts.
 
 Conversation:
 {conversation_text}
@@ -215,7 +217,21 @@ Conversation:
         stored_memories: List[UserMemory] = []
 
         for line in raw_output.split("\n"):
-            memory_text = line.strip()
+            line = line.strip()
+            if not line:
+                continue
+                
+            memory_type = "conversation_insight"
+            memory_text = line
+
+            import re
+            match = re.match(r"^\[(.*?)\]\s*(.*)$", line)
+            if match:
+                parsed_type = match.group(1).strip()
+                parsed_text = match.group(2).strip()
+                if parsed_type in ["academic_weak_spot", "academic_strength", "learning_style", "conversation_insight"]:
+                    memory_type = parsed_type
+                memory_text = parsed_text
 
             if memory_text.startswith("-"):
                 memory_text = memory_text[1:].strip()
@@ -239,7 +255,7 @@ Conversation:
             memory = UserMemory(
                 user_id=user_id,
                 companion_id=companion_id,
-                memory_type="conversation_insight",
+                memory_type=memory_type,
                 memory_text=memory_text,
                 source_conversation_id=conversation_id
             )

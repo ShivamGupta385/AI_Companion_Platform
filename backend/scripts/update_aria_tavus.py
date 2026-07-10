@@ -3,7 +3,7 @@ from backend.app.models.companion import Companion
 
 # Replace these with your FULL IDs from Tavus
 FACE_ID = "rfc63eab317e"
-PAL_ID = "p7a2f792c2ba"
+PAL_ID = "p586cb1aa20b"
 
 db = SessionLocal()
 
@@ -24,7 +24,7 @@ try:
 
     db.commit()
 
-    print("✅ Aria updated successfully!")
+    print("Successfully updated Aria in database!")
     print("Provider :", aria.avatar_provider)
     print("Replica  :", aria.tavus_replica_id)
     print("PAL      :", aria.tavus_persona_id)

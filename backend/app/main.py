@@ -34,6 +34,9 @@ from backend.app.api.v1.heygenavatar import (
 from backend.app.api.v1.tavus import (
     router as tavus_router
 )
+from backend.app.api.v1.tavus_tools import (
+    router as tavus_tools_router
+)
 
 app = FastAPI(
     title="AI Companion Platform",
@@ -115,6 +118,12 @@ app.include_router(
     tavus_router,
     prefix="/api/v1/tavus",
     tags=["Tavus Avatar"]
+)
+
+app.include_router(
+    tavus_tools_router,
+    prefix="/api/v1/tavus_tools",
+    tags=["Tavus Tools"]
 )
 
 @app.get("/")

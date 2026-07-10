@@ -1,0 +1,64 @@
+{
+  "persona_id": "p7a2f792c2ba",
+  "persona_name": "New PAL 2026-07-04 2:42pm",
+  "persona_description": "",
+  "is_published": false,
+  "pipeline_mode": "full",
+  "system_prompt": " ",
+  "context": "",
+  "layers": {
+    "tts": {
+      "voice_settings": {},
+      "external_voice_id": "",
+      "tts_engine": "cartesia",
+      "api_key": "",
+      "playht_user_id": "",
+      "tts_emotion_control": true,
+      "tts_model_name": "sonic-3.5",
+      "pronunciation_dictionary_id": null
+    },
+    "llm": {
+      "tools": [],
+      "headers": {},
+      "extra_body": {},
+      "default_query": {},
+      "base_url": "https://78fd-2a09-bac1-36a0-1468-00-ca-d2.ngrok-free.app/api/v1/tavus/llm/ca59bcf0-9281-425b-9368-7ce55cad0351",
+      "api_key": "********",
+      "model": "gpt-4o",
+      "speculative_inference": true
+    },
+    "conversational_flow": {
+      "turn_detection_model": "sparrow-1",
+      "turn_taking_patience": "medium",
+      "replica_interruptibility": "medium",
+      "voice_isolation": "near",
+      "wake_phrase": null,
+      "idle_engagement": "off"
+    }
+  },
+  "objectives_id": null,
+  "guardrails_id": null,
+  "greeting": "",
+  "default_replica_id": "",
+  "document_ids": [],
+  "document_tags": [],
+  "guardrail_ids": [],
+  "guardrail_tags": [],
+  "tool_ids": [
+    "t457be0aac29c",
+    "t9dd35743a68b",
+    "tf52e014e6351"
+  ],
+  "skills": {
+    "magic_canvas": {
+      "config": {
+        "components": {},
+        "usage_guidance": ""
+      },
+      "updated_at": "2026-07-10T09:20:55.062632+00:00",
+      "attached_at": "2026-07-10T09:19:42.121928+00:00"
+    }
+  },
+  "created_at": "2026-07-04T09:12:17.304378Z",
+  "updated_at": "2026-07-10T09:20:55.119668Z"
+}
