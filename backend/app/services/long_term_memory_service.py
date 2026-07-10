@@ -1,3 +1,5 @@
+# backend/app/services/long_term_memory_service.py
+
 from typing import List, Optional
 from uuid import UUID
 
@@ -21,6 +23,7 @@ class LongTermMemoryService:
     4. Build conversation transcript text for summarization
     5. Generate / update conversation summaries
     6. Extract and store useful long-term memories
+    7. Extract and store cross-agent companion-specific memories (NEW)
     """
 
     # ---------------------------------------------------------
@@ -372,5 +375,267 @@ Conversation:
             existing_normalized.add(normalized)
 
         db.flush()
+
+        return stored_memories
+
+    # =========================================================
+    # CROSS-AGENT MEMORY METHODS (NEW)
+    # =========================================================
+
+    @staticmethod
+    def save_cross_agent_memory(
+        db: Session,
+        user_id: UUID,
+        companion_id: UUID,
+        memory_type: str,
+        memory_text: str,
+        source_conversation_id: Optional[UUID] = None
+    ) -> Optional[UserMemory]:
+        """
+        Save a memory that other companions can read.
+
+        Uses the same user_memories table but with companion-specific
+        memory_type values like "Sleep Patterns", "Knowledge Map",
+        "Fitness Level", etc.
+
+        The companion_id ties the memory to the companion that wrote it.
+        Other companions' cross_memory_node will pick this up via
+        CrossMemoryService.get_cross_agent_memories().
+
+        Includes:
+        - Write permission check against CROSS_MEMORY_RULES
+        - Deduplication against existing memories of same type + companion
+        - Auto-update if same normalized content exists
+        """
+        # Import inside method to avoid circular imports
+        from backend.app.models.companion import Companion
+        from backend.app.services.cross_memory_service import CrossMemoryService
+
+        memory_text = LongTermMemoryService.clean_text(memory_text)
+
+        if not memory_text.strip():
+            return None
+
+        # --------------------------------------------------
+        # Get companion name from ID to validate write permission
+        # --------------------------------------------------
+        companion = db.query(Companion).filter(
+            Companion.id == companion_id
+        ).first()
+
+        if not companion:
+            print(
+                f"[CROSS MEMORY WRITE] Companion not found: {companion_id}"
+            )
+            return None
+
+        companion_name = companion.name
+
+        # --------------------------------------------------
+        # Check write permission
+        # --------------------------------------------------
+        allowed_types = CrossMemoryService().get_allowed_write_types(
+            companion_name
+        )
+
+        if memory_type not in allowed_types:
+            print(
+                f"[CROSS MEMORY WRITE] Blocked: {companion_name} "
+                f"cannot write memory_type '{memory_type}'. "
+                f"Allowed: {allowed_types}"
+            )
+            return None
+
+        # --------------------------------------------------
+        # Dedupe: check if same normalized content exists
+        # for this user + companion + memory_type
+        # --------------------------------------------------
+        normalized = LongTermMemoryService.normalize_memory_text(memory_text)
+
+        existing = (
+            db.query(UserMemory)
+            .filter(UserMemory.user_id == user_id)
+            .filter(UserMemory.companion_id == companion_id)
+            .filter(UserMemory.memory_type == memory_type)
+            .all()
+        )
+
+        for mem in existing:
+            existing_normalized = LongTermMemoryService.normalize_memory_text(
+                mem.memory_text
+            )
+
+            if existing_normalized == normalized:
+                # Update existing memory instead of duplicating
+                mem.memory_text = memory_text
+                db.flush()
+                print(
+                    f"[CROSS MEMORY WRITE] Updated existing: "
+                    f"{companion_name} [{memory_type}] "
+                    f"{memory_text[:80]}"
+                )
+                return mem
+
+        # --------------------------------------------------
+        # New memory
+        # --------------------------------------------------
+        memory = UserMemory(
+            user_id=user_id,
+            companion_id=companion_id,
+            memory_type=memory_type,
+            memory_text=memory_text,
+            source_conversation_id=source_conversation_id
+        )
+
+        db.add(memory)
+        db.flush()
+
+        print(
+            f"[CROSS MEMORY WRITE] Saved new: "
+            f"{companion_name} [{memory_type}] "
+            f"{memory_text[:80]}"
+        )
+
+        return memory
+
+    @staticmethod
+    async def extract_and_store_cross_agent_memories(
+        db: Session,
+        conversation_id: UUID,
+        user_id: UUID,
+        companion_id: UUID,
+        companion_name: str
+    ) -> List[UserMemory]:
+        """
+        Extract companion-specific memories and store them
+        with the correct memory_type for cross-agent sharing.
+
+        Unlike extract_and_store_memories() which uses generic
+        "conversation_insight" type, this uses companion-specific
+        types like "Sleep Patterns", "Knowledge Map", etc.
+
+        These memories are readable by OTHER companions via
+        cross_memory_node.
+
+        Example output from LLM:
+            [Sleep Patterns]: User averages 4-5 hours on weeknights
+            [Stress Triggers]: Work deadlines cause anxiety spikes
+        """
+        # Import inside method to avoid circular imports
+        from backend.app.services.cross_memory_service import CrossMemoryService
+
+        # --------------------------------------------------
+        # Get allowed write types for this companion
+        # --------------------------------------------------
+        allowed_types = CrossMemoryService().get_allowed_write_types(
+            companion_name
+        )
+
+        if not allowed_types:
+            return []
+
+        # --------------------------------------------------
+        # Build conversation transcript
+        # --------------------------------------------------
+        conversation_text = LongTermMemoryService.build_conversation_text(
+            db=db,
+            conversation_id=conversation_id,
+            limit=40
+        )
+
+        conversation_text = LongTermMemoryService.clean_text(conversation_text)
+
+        if not conversation_text.strip():
+            return []
+
+        # --------------------------------------------------
+        # Build extraction prompt with allowed types
+        # --------------------------------------------------
+        types_list = "\n".join(f"- {t}" for t in allowed_types)
+
+        extraction_prompt = f"""
+You are extracting structured memories for a cross-agent AI companion system.
+
+The current companion is "{companion_name}".
+You can ONLY write memories with these types:
+{types_list}
+
+From the conversation below, extract information that would be useful
+for OTHER companions to know about this user.
+
+Rules:
+- Only use the memory types listed above
+- Each memory must be tagged with exactly one type
+- Keep memories factual and concise (one sentence each)
+- Do NOT extract temporary small talk or greetings
+- Focus on stable, actionable information
+- If nothing worth remembering, return exactly: NONE
+
+Return format (STRICTLY follow this — one memory per line):
+[TYPE]: memory text here
+[TYPE]: another memory here
+
+Conversation:
+{conversation_text}
+"""
+
+        response = await llm.ainvoke(extraction_prompt)
+        raw_output = getattr(response, "content", "") or ""
+        raw_output = LongTermMemoryService.clean_text(raw_output)
+
+        if not raw_output or raw_output.strip().upper() == "NONE":
+            return []
+
+        # --------------------------------------------------
+        # Parse and store each memory
+        # --------------------------------------------------
+        stored_memories: List[UserMemory] = []
+
+        for line in raw_output.split("\n"):
+            line = line.strip()
+
+            if not line or line.upper() == "NONE":
+                continue
+
+            # Parse [TYPE]: content format
+            if not line.startswith("[") or "]:" not in line:
+                continue
+
+            try:
+                type_end = line.index("]:")
+                memory_type = line[1:type_end].strip()
+                memory_text = line[type_end + 2:].strip()
+            except (ValueError, IndexError):
+                continue
+
+            if not memory_type or not memory_text:
+                continue
+
+            # Validate type is allowed for this companion
+            if memory_type not in allowed_types:
+                print(
+                    f"[CROSS MEMORY EXTRACT] Skipped disallowed type: "
+                    f"{memory_type} for {companion_name}"
+                )
+                continue
+
+            # Save with permission check + dedup
+            memory = LongTermMemoryService.save_cross_agent_memory(
+                db=db,
+                user_id=user_id,
+                companion_id=companion_id,
+                memory_type=memory_type,
+                memory_text=memory_text,
+                source_conversation_id=conversation_id
+            )
+
+            if memory:
+                stored_memories.append(memory)
+
+        if stored_memories:
+            print(
+                f"[CROSS MEMORY EXTRACT] {companion_name} stored "
+                f"{len(stored_memories)} cross-agent memories"
+            )
 
         return stored_memories

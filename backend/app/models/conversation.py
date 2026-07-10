@@ -32,8 +32,10 @@ class Conversation(Base):
         ForeignKey("companions.id")
     )
 
+    # ✅ FIXED: Changed from old Column() to mapped_column()
     conversation_type: Mapped[str] = mapped_column(
-        String(50)
+        String(50),
+        default="chat"
     )
 
     # --------------------------

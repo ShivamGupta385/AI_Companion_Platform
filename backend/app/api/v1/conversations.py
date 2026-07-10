@@ -24,7 +24,6 @@ from backend.app.schemas.conversation_schema import (
 
 from backend.app.core.security import get_current_user
 
-
 router = APIRouter()
 
 
@@ -38,10 +37,6 @@ async def create_conversation(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Create a new conversation for the authenticated user.
-    """
-
     companion = (
         db.query(Companion)
         .filter(
@@ -78,13 +73,6 @@ async def get_conversations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Get all conversations of the current user with:
-    - companion name
-    - last message
-    - message count
-    """
-
     conversations = (
         db.query(Conversation)
         .filter(Conversation.user_id == current_user.id)
@@ -143,11 +131,6 @@ async def get_conversation(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Get a specific conversation with companion details.
-    Used by the chat page / Tavus panel.
-    """
-
     conversation = (
         db.query(Conversation)
         .filter(
@@ -178,3 +161,83 @@ async def get_conversation(
         started_at=conversation.started_at,
         updated_at=conversation.updated_at
     )
+
+
+# ----------------------------------------------------------
+# DELETE CONVERSATION (SAFE VERSION)
+# ----------------------------------------------------------
+@router.delete(
+    "/{conversation_id}",
+    status_code=status.HTTP_200_OK
+)
+async def delete_conversation(
+    conversation_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Safely delete a conversation and all associated records.
+    """
+
+    conversation = (
+        db.query(Conversation)
+        .filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == current_user.id
+        )
+        .first()
+    )
+
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found"
+        )
+
+    try:
+        # Delete all messages
+        db.query(Message).filter(
+            Message.conversation_id == conversation.id
+        ).delete(synchronize_session=False)
+
+        # Delete conversation summaries (if model exists)
+        try:
+            from backend.app.models.conversation_summary import ConversationSummary
+
+            db.query(ConversationSummary).filter(
+                ConversationSummary.conversation_id == conversation.id
+            ).delete(synchronize_session=False)
+
+        except ImportError:
+            pass
+
+        # Delete user memories (if model exists)
+        try:
+            from backend.app.models.user_memory import UserMemory
+
+            db.query(UserMemory).filter(
+                UserMemory.source_conversation_id == conversation.id
+            ).delete(synchronize_session=False)
+
+        except ImportError:
+            pass
+
+        # Delete conversation
+        db.delete(conversation)
+
+        db.commit()
+
+        return {
+            "status": "success",
+            "message": "Conversation and all related data deleted successfully"
+        }
+
+    except Exception as e:
+        db.rollback()
+
+        print(f"[DELETE ERROR] {e}")
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete conversation: {str(e)}"
+        )

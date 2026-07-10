@@ -3,6 +3,7 @@ from pydantic_settings import (
     SettingsConfigDict
 )
 
+from typing import Optional
 
 class Settings(BaseSettings):
     DATABASE_URL: str
@@ -32,6 +33,7 @@ class Settings(BaseSettings):
 
     LIVEAVATAR_SECRET_ID: str
     ELEVENLABS_AGENT_ID: str
+    TAVUS_WEBHOOK_URL: Optional[str] = None
 
     # ---------------------------------
     # Tavus Callback URL

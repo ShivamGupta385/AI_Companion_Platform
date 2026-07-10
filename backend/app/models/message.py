@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy import String, Text, DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from backend.app.db.base import Base
@@ -26,7 +26,6 @@ class Message(Base):
     message_text: Mapped[str] = mapped_column(
         Text
     )
-
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now()

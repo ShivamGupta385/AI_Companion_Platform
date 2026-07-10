@@ -71,4 +71,16 @@ export const conversationService = {
 
     return response.data;
   },
+
+  async deleteConversation(
+    conversationId: string
+  ): Promise<void> {
+    const token = Cookies.get("token");
+
+    await api.delete(`/conversations/${conversationId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
 };

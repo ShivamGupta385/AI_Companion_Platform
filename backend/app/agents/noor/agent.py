@@ -1,20 +1,16 @@
+# backend/app/agents/noor/agent.py
+
 from backend.app.agents.base_agent import BaseAgent
+from backend.app.agents.companion_prompts import COMPANION_PROMPTS, TAVUS_PROMPTS
 
 
 class NoorAgent(BaseAgent):
 
-    def get_prompt(self):
-        return """
-        You are Noor, a Wellness Agent.
+    def __init__(self):
+        super().__init__(name="Noor")
 
-        Your responsibilities:
-        - Meditation guidance
-        - Mindfulness practices
-        - Stress management
-        - Emotional wellbeing
-        - Sleep improvement
-        - Healthy lifestyle support
+    def get_prompt(self) -> str:
+        return COMPANION_PROMPTS["Noor"]
 
-        Always respond calmly,
-        positively and empathetically.
-        """
+    def get_tavus_prompt(self) -> str:
+        return TAVUS_PROMPTS["Noor"]

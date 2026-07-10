@@ -1,3 +1,5 @@
+# backend/app/graph/nodes/graph_rag_node.py
+
 from uuid import UUID
 
 from backend.app.db.session import SessionLocal
@@ -34,6 +36,39 @@ def is_memory_query(query: str) -> bool:
     )
 
 
+def _serialize_nodes(nodes) -> list:
+    """
+    Convert SQLAlchemy KnowledgeNode objects to plain dicts
+    so LangGraph's msgpack checkpointer can serialize them.
+    """
+    serialized = []
+    for node in nodes:
+        serialized.append({
+            "id": str(node.id) if node.id else None,
+            "node_name": node.node_name,
+            "node_type": node.node_type,
+            "description": node.description,
+        })
+    return serialized
+
+
+def _serialize_edges(edges) -> list:
+    """
+    Convert SQLAlchemy KnowledgeEdge objects to plain dicts
+    so LangGraph's msgpack checkpointer can serialize them.
+    """
+    serialized = []
+    for edge in edges:
+        serialized.append({
+            "id": str(edge.id) if edge.id else None,
+            "source_node_id": str(edge.source_node_id) if edge.source_node_id else None,
+            "target_node_id": str(edge.target_node_id) if edge.target_node_id else None,
+            "relation_type": edge.relation_type,
+            "evidence_text": edge.evidence_text,
+        })
+    return serialized
+
+
 def graph_rag_node(state):
     """
     LangGraph node for Graph RAG retrieval.
@@ -44,6 +79,10 @@ def graph_rag_node(state):
     3. Build graph context text
     4. Merge vector RAG context + graph RAG context into hybrid_context
     5. Store graph fields back into graph state
+
+    IMPORTANT: All SQLAlchemy objects MUST be converted to plain
+    dicts before returning in state, because LangGraph's PostgreSQL
+    checkpointer uses msgpack which cannot serialize ORM objects.
     """
 
     db = SessionLocal()
@@ -96,10 +135,17 @@ def graph_rag_node(state):
         )
 
         raw_graph_context = graph_result.get("graph_context", "")
-        graph_nodes = graph_result.get("graph_nodes", []) or []
-        graph_edges = graph_result.get("graph_edges", []) or []
+        raw_graph_nodes = graph_result.get("graph_nodes", []) or []
+        raw_graph_edges = graph_result.get("graph_edges", []) or []
 
         graph_context = clean_text(raw_graph_context)
+
+        # ---------------------------------------------------------
+        # CRITICAL: Serialize SQLAlchemy objects to plain dicts
+        # LangGraph's msgpack checkpointer cannot serialize ORM objects
+        # ---------------------------------------------------------
+        graph_nodes = _serialize_nodes(raw_graph_nodes)
+        graph_edges = _serialize_edges(raw_graph_edges)
 
         # ---------------------------------------------------------
         # Build hybrid context

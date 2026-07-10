@@ -1,3 +1,5 @@
+# backend/app/graph/state.py
+
 from typing import TypedDict, List, Tuple, Optional, Any
 
 
@@ -52,6 +54,24 @@ class CompanionState(TypedDict, total=False):
     # --------------------------------------------------
     long_term_memories: List[str]
     conversation_summaries: List[str]
+
+    # --------------------------------------------------
+    # CROSS-AGENT MEMORY (NEW)
+    # --------------------------------------------------
+    # Memories written by OTHER companions about this user
+    cross_agent_memories: List[dict]
+    # Example structure per item:
+    # {
+    #     "source_companion": "Noor",
+    #     "memory_type": "Sleep Patterns",
+    #     "content": "User averages 4-5 hours of sleep on weeknights",
+    #     "timestamp": "2025-01-15T08:00:00Z",
+    #     "confidence": 0.9
+    # }
+
+    # Structured cross-agent context string
+    # (built from cross_agent_memories, injected into prompt)
+    cross_agent_context: str
 
     # --------------------------------------------------
     # Output

@@ -2,7 +2,8 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    status
+    Request,
+    status,
 )
 
 from sqlalchemy.orm import Session
@@ -21,13 +22,6 @@ from backend.app.schemas.message_schema import MessageResponse
 from backend.app.schemas.chat_schema import ChatRequest, ChatResponse
 
 from backend.app.core.security import get_current_user
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Request,
-    status,
-)
 from backend.app.services.long_term_memory_service import (
     LongTermMemoryService
 )
@@ -38,7 +32,7 @@ router = APIRouter()
 def build_memory_buffer(
     db: Session,
     conversation_id,
-    limit: int = 12
+    limit: int = 50  # Increased to 50
 ):
     """
     Build recent conversation buffer from the SAME DB session
@@ -60,7 +54,7 @@ def build_memory_buffer(
         if msg.sender_type == "user":
             role = "human"
         elif msg.sender_type == "assistant":
-            role = "assistant"
+            role = "ai"  # FIXED: LangChain expects "ai", not "assistant"
         else:
             role = "system"
 
@@ -82,12 +76,6 @@ async def chat(
 ):
     """
     Chat with selected companion using LangGraph.
-
-    Features:
-    - stores chat messages in PostgreSQL
-    - builds short-term thread memory from messages table
-    - loads long-term memory through graph nodes
-    - updates long-term summaries and user memories after enough messages
     """
 
     conversation = (
@@ -141,7 +129,7 @@ async def chat(
         memory_buffer = build_memory_buffer(
             db=db,
             conversation_id=conversation.id,
-            limit=12
+            limit=50  # FIXED: Explicitly pass 50
         )
 
         print("=" * 80)
@@ -163,11 +151,18 @@ async def chat(
                 "companion_name": companion.name,
                 "user_message": chat_data.message,
                 "user_id": str(current_user.id),
-                "user_profile": (
-                    onboarding.baseline_data
-                    if onboarding and onboarding.baseline_data
-                    else {}
-                ),
+                "user_profile": {
+                    **(
+                        onboarding.baseline_data
+                        if onboarding and onboarding.baseline_data
+                        else {}
+                    ),
+                    "name": (
+                        onboarding.baseline_data.get("name")
+                        if onboarding and onboarding.baseline_data and onboarding.baseline_data.get("name")
+                        else current_user.full_name or current_user.username or "Unknown"
+                    ),
+                },
                 "memory": memory_buffer,
             },
             config={
@@ -216,7 +211,7 @@ async def chat(
 
         print(f"[CHAT] Message count for conversation: {message_count}")
 
-        if message_count >= 8:
+        if message_count >= 4 and message_count % 4 == 0:
             print("[CHAT] Triggering long-term memory update...")
 
             await LongTermMemoryService.upsert_conversation_summary(
@@ -233,12 +228,19 @@ async def chat(
                 companion_id=companion.id
             )
 
+            await LongTermMemoryService.extract_and_store_cross_agent_memories(
+                db=db,
+                conversation_id=conversation.id,
+                user_id=current_user.id,
+                companion_id=companion.id,
+                companion_name=companion.name
+            )
+
         # ---------------------------------------------------
         # 7) Commit everything
         # ---------------------------------------------------
         db.commit()
 
-        # ✅ CORRECT (Include conversation_id)
         return ChatResponse(
             conversation_id=conversation.id,
             response=ai_response,
@@ -304,4 +306,4 @@ async def get_messages(
         .all()
     )
 
-    return messages
+    return messages 

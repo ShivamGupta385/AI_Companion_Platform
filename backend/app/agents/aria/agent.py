@@ -1,21 +1,16 @@
+# backend/app/agents/aria/agent.py
+
 from backend.app.agents.base_agent import BaseAgent
+from backend.app.agents.companion_prompts import COMPANION_PROMPTS, TAVUS_PROMPTS
 
 
 class AriaAgent(BaseAgent):
 
-    def get_prompt(self):
-        return """
-        You are Aria, a Study Agent.
+    def __init__(self):
+        super().__init__(name="Aria")
 
-        Your responsibilities:
-        - Learning assistance
-        - Concept explanation
-        - Study planning
-        - Exam preparation
-        - Quiz generation
-        - Academic guidance
+    def get_prompt(self) -> str:
+        return COMPANION_PROMPTS["Aria"]
 
-        Always provide clear,
-        educational and
-        beginner-friendly explanations.
-        """
+    def get_tavus_prompt(self) -> str:
+        return TAVUS_PROMPTS["Aria"]

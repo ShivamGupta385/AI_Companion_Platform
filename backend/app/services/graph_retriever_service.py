@@ -1,3 +1,5 @@
+# backend/app/services/graph_retriever_service.py
+
 from uuid import UUID
 from typing import List, Dict, Set
 
@@ -260,4 +262,37 @@ class GraphRetrieverService:
                 node_limit=node_limit,
                 edge_limit=edge_limit
             )
+        }
+
+    @staticmethod
+    def retrieve_graph_context(
+        db: Session,
+        user_id: UUID,
+        query: str,
+        node_limit: int = 10,
+        edge_limit: int = 20
+    ) -> dict:
+        """
+        Graph RAG retrieval method that returns the exact structure
+        expected by graph_rag_node.py.
+
+        Returns:
+            {
+                "graph_context": str,   # formatted text for LLM
+                "graph_nodes": list,    # matched KnowledgeNode objects
+                "graph_edges": list     # connected KnowledgeEdge objects
+            }
+        """
+        payload = GraphRetrieverService.retrieve_graph_payload(
+            db=db,
+            user_id=user_id,
+            query=query,
+            node_limit=node_limit,
+            edge_limit=edge_limit
+        )
+
+        return {
+            "graph_context": payload.get("graph_context", ""),
+            "graph_nodes": payload.get("nodes", []),
+            "graph_edges": payload.get("edges", []),
         }
