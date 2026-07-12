@@ -172,7 +172,7 @@ def create_tavus_session(
         # Automatically update Tavus persona custom LLM base_url pointing to our local active tunnel and conversation ID
         custom_greeting = None
         if companion.name.lower() == "aria":
-            custom_greeting = "Hi there! I'm Aria. I'm so excited to explore some new concepts with you today. What are we diving into?"
+            custom_greeting = "Hi, I'm Aria! What are we studying today?"
 
         # Fetch user insights to inject into context
         memories = db.query(UserMemory).filter(UserMemory.user_id == current_user.id).all()
@@ -218,7 +218,8 @@ def create_tavus_session(
             ),
             document_ids=document_ids,
             custom_greeting=custom_greeting,
-            conversational_context=conversational_context
+            conversational_context=conversational_context,
+            memory_stores=[str(current_user.id)]
         )
 
         print("[TAVUS CREATE RESPONSE]", tavus_response)
@@ -268,30 +269,14 @@ def end_tavus_session(
     try:
         response = TavusService.end_conversation(conversation_id)
         
-        # Trigger final memory extraction for this session
+        # Update study streak
         from backend.app.models.conversation import Conversation
         conv = db.query(Conversation).filter(Conversation.tavus_persona_id == conversation_id).first()
         if conv:
-            from backend.app.services.long_term_memory_service import LongTermMemoryService
-            
-            def trigger_final_memory(c_id, u_id, comp_id):
+            def update_study_streak(u_id):
                 from backend.app.db.session import SessionLocal
                 mem_db = SessionLocal()
                 try:
-                    print("[TAVUS SESSION END] Triggering final memory extraction...")
-                    LongTermMemoryService.upsert_conversation_summary(
-                        db=mem_db,
-                        conversation_id=c_id,
-                        user_id=u_id,
-                        companion_id=comp_id
-                    )
-                    LongTermMemoryService.extract_and_store_memories(
-                        db=mem_db,
-                        conversation_id=c_id,
-                        user_id=u_id,
-                        companion_id=comp_id
-                    )
-                    
                     # Update study streak
                     from backend.app.models.user import User
                     from datetime import datetime, timezone, timedelta
@@ -316,12 +301,12 @@ def end_tavus_session(
                                 
                         mem_db.commit()
                 except Exception as e:
-                    print("[TAVUS FINAL MEMORY ERROR]", str(e))
+                    print("[TAVUS STUDY STREAK ERROR]", str(e))
                 finally:
                     mem_db.close()
                     
             # Fire and forget
-            background_tasks.add_task(trigger_final_memory, conv.id, conv.user_id, conv.companion_id)
+            background_tasks.add_task(update_study_streak, conv.user_id)
 
         return response
     except Exception as e:

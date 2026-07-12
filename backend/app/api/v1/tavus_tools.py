@@ -108,32 +108,4 @@ async def search_documents(request: Request):
     except Exception as e:
         return {"result": f"Error searching documents: {str(e)}"}
 
-@router.post("/get_conversation_history")
-async def get_conversation_history(request: Request):
-    """Webhook for Tavus to fetch past memories and summaries."""
-    auth = request.headers.get("Authorization")
-    if auth != f"Bearer {settings.SECRET_KEY}":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    body = await request.json()
-    args = extract_args(body)
-    
-    user_id = args.get("user_id", "")
-    date_time = args.get("date_time", "")
-    
-    if not user_id:
-        return {"result": "Error: user_id is required."}
-        
-    try:
-        if date_time:
-            mem_query = f"SELECT summary_text, updated_at FROM conversation_summaries WHERE user_id = '{user_id}' AND CAST(updated_at AS TEXT) LIKE '%{date_time}%' ORDER BY updated_at DESC LIMIT 5"
-        else:
-            mem_query = f"SELECT summary_text, updated_at FROM conversation_summaries WHERE user_id = '{user_id}' ORDER BY updated_at DESC LIMIT 5"
-        
-        mem_res = run_postgres_query(mem_query)
-        facts_query = f"SELECT memory_text, memory_type FROM user_memories WHERE user_id = '{user_id}' LIMIT 20"
-        facts_res = run_postgres_query(facts_query)
-        
-        return {"result": f"CONVERSATION SUMMARIES:\n{mem_res}\n\nUSER FACTS AND MEMORIES:\n{facts_res}"}
-    except Exception as e:
-        return {"result": f"Error retrieving history: {str(e)}"}

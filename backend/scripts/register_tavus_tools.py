@@ -30,7 +30,9 @@ def register_tool(payload):
             for t in tools:
                 if t.get("name") == payload["name"]:
                     print(f"Tool {payload['name']} already exists with ID: {t.get('tool_id')}")
-                    # Update it if possible or just skip
+                    # Update it
+                    update_res = requests.patch(f"{TAVUS_API_URL}/{t.get('tool_id')}", headers=HEADERS, json=payload)
+                    print(f"Updated tool {payload['name']} status:", update_res.status_code)
                     return t.get('tool_id')
     except Exception as e:
         pass
@@ -51,12 +53,22 @@ def main():
             "description": "Execute a read-only SELECT query on the user's Postgres database to look up information. NEVER select 'password_hash'.",
             "trigger_type": "in_call",
             "origin": "llm",
+            "on_call": "generate_filler",
+            "on_resolve": "generate_response",
             "delivery": {
-                "channel": "webhook",
-                "webhook_url": f"{BACKEND_PUBLIC_URL}/api/v1/tavus_tools/query_database",
-                "auth": {
-                    "type": "bearer",
-                    "token": SECRET_KEY
+                "app_message": False,
+                "api": {
+                    "url": f"{BACKEND_PUBLIC_URL}/tavus_tools/query_database",
+                    "method": "POST",
+                    "timeout": 20,
+                    "auth": {
+                        "type": "bearer",
+                        "token": SECRET_KEY
+                    },
+                    "body_template": {
+                        "user_id": "{user_id}",
+                        "sql": "{sql}"
+                    }
                 }
             },
             "parameters": {
@@ -79,12 +91,22 @@ def main():
             "description": "Perform a semantic search over the user's uploaded documents and notes to find relevant academic content. Pass core semantic keywords.",
             "trigger_type": "in_call",
             "origin": "llm",
+            "on_call": "generate_filler",
+            "on_resolve": "generate_response",
             "delivery": {
-                "channel": "webhook",
-                "webhook_url": f"{BACKEND_PUBLIC_URL}/api/v1/tavus_tools/search_documents",
-                "auth": {
-                    "type": "bearer",
-                    "token": SECRET_KEY
+                "app_message": False,
+                "api": {
+                    "url": f"{BACKEND_PUBLIC_URL}/tavus_tools/search_documents",
+                    "method": "POST",
+                    "timeout": 20,
+                    "auth": {
+                        "type": "bearer",
+                        "token": SECRET_KEY
+                    },
+                    "body_template": {
+                        "user_id": "{user_id}",
+                        "query": "{query}"
+                    }
                 }
             },
             "parameters": {
@@ -100,34 +122,6 @@ def main():
                     }
                 },
                 "required": ["user_id", "query"]
-            }
-        },
-        {
-            "name": "get_conversation_history",
-            "description": "Fetch the summarized conversation history and long-term memories for this user.",
-            "trigger_type": "in_call",
-            "origin": "llm",
-            "delivery": {
-                "channel": "webhook",
-                "webhook_url": f"{BACKEND_PUBLIC_URL}/api/v1/tavus_tools/get_conversation_history",
-                "auth": {
-                    "type": "bearer",
-                    "token": SECRET_KEY
-                }
-            },
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "user_id": {
-                        "type": "string",
-                        "description": "The exact user UUID injected via conversational_context. MUST be provided."
-                    },
-                    "date_time": {
-                        "type": "string",
-                        "description": "Optional date string to filter history in exact YYYY-MM-DD format."
-                    }
-                },
-                "required": ["user_id"]
             }
         }
     ]
