@@ -1,18 +1,21 @@
 "use client";
 
-import LiveAvatar from "./LiveAvatar";
+import TavusAvatar from "./TavusAvatar";
 
 interface AvatarContainerProps {
-  lastAssistantMessage?: string;
+  companionId: string;
+  companionName: string;
 }
 
 export default function AvatarContainer({
-  lastAssistantMessage,
+  companionId,
+  companionName,
 }: AvatarContainerProps) {
   return (
-    <div className="flex justify-center py-4">
-      <LiveAvatar
-        lastAssistantMessage={lastAssistantMessage}
+    <div className="flex justify-center py-4 w-full">
+      <TavusAvatar
+        companionId={companionId}
+        companionName={companionName}
       />
     </div>
   );

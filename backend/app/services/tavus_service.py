@@ -1,5 +1,5 @@
 import requests
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 from backend.app.core.config import settings
 
@@ -16,7 +16,10 @@ class TavusService:
         replica_id: str,
         persona_id: Optional[str] = None,
         conversation_name: Optional[str] = None,
-        document_ids: Optional[list[str]] = None
+        document_ids: Optional[list[str]] = None,
+        custom_greeting: Optional[str] = None,
+        conversational_context: Optional[str] = None
+        # tool_definitions REMOVED from here - Tavus does not accept this on conversations
     ) -> Dict[str, Any]:
         """
         Create a Tavus conversation/session.
@@ -36,8 +39,12 @@ class TavusService:
 
         if document_ids:
             payload["document_ids"] = document_ids
-
-        # Removed timeouts per user request
+            
+        if custom_greeting:
+            payload["custom_greeting"] = custom_greeting
+            
+        if conversational_context:
+            payload["conversational_context"] = conversational_context
 
         headers = {
             "x-api-key": settings.TAVUS_API_KEY,
@@ -158,7 +165,8 @@ class TavusService:
         persona_name: str,
         system_prompt: str,
         replica_id: str,
-        document_ids: Optional[list[str]] = None
+        document_ids: Optional[list[str]] = None,
+        tool_definitions: Optional[List[Dict[str, Any]]] = None  # <-- ADDED THIS HERE
     ) -> str:
         """
         Create a dynamic Persona (PAL) for this session.
@@ -179,6 +187,11 @@ class TavusService:
 
         if document_ids:
             payload["document_ids"] = document_ids
+
+        # <-- ADDED THIS BLOCK TO PASS TOOLS TO TAVUS -->
+        if tool_definitions:
+            payload["tool_definitions"] = tool_definitions
+        # ------------------------------------------------
 
         headers = {
             "x-api-key": settings.TAVUS_API_KEY,
@@ -236,4 +249,4 @@ class TavusService:
         print("=" * 60)
         print("[TAVUS DELETE PERSONA] STATUS:", response.status_code)
         print("[TAVUS DELETE PERSONA] RESPONSE:", response.text)
-        print("=" * 60)
+        print("=" * 60) 

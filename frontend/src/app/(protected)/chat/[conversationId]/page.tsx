@@ -108,12 +108,12 @@ export default function ChatPage() {
         </div>
       </div>
 
-            {/* Main Chat Area */}
+      {/* Main Chat Area */}
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="flex-1 overflow-y-auto">
           <div className="py-6 space-y-6">
             
-            {/* TOP BADGES - Centered but not trapped in 4xl */}
+            {/* TOP BADGES */}
             <div className="mx-auto max-w-4xl w-full px-6">
               <div className="flex flex-wrap gap-3">
                 <div className="flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm text-violet-700">
@@ -125,14 +125,16 @@ export default function ChatPage() {
               </div>
             </div>
 
-            {/* INTEGRATED AVATAR CARD - PULLED OUT OF 4XL! NOW FULL WIDTH */}
+            {/* INTEGRATED AVATAR CARD */}
             <div className="px-6">
               <div className="w-full max-w-7xl mx-auto">
-                <TavusAvatar companionId={companionId} />
+                <TavusAvatar 
+                companionId={companionId} 
+                companionName={companionName}/>
               </div>
             </div>
 
-            {/* Chat Messages or Empty State - KEPT NARROW FOR READABILITY */}
+            {/* Chat Messages or Empty State */}
             <div className="mx-auto max-w-4xl w-full px-6">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center text-center mt-10">
@@ -146,17 +148,30 @@ export default function ChatPage() {
                   </p>
 
                   <div className="mt-10 grid w-full max-w-5xl gap-4 md:grid-cols-3">
-                    <button onClick={() => handleSend("Help me plan my studies")} className="rounded-3xl border border-[#ECEAF4] bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:border-violet-300 hover:shadow-md">
+                    <button 
+                      onClick={() => handleSend("Help me plan my studies")} 
+                      className="rounded-3xl border border-[#ECEAF4] bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:border-violet-300 hover:shadow-md"
+                    >
                       <div className="mb-3 text-2xl">📚</div>
                       <h3 className="font-semibold text-slate-900">Study Planning</h3>
                       <p className="mt-2 text-sm text-slate-500">Build a focused learning roadmap.</p>
                     </button>
-                    <button onClick={() => handleSend("Guide me to stay productive")} className="rounded-3xl border border-[ECEAF4] bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:border-violet-300 hover:shadow-md">
+                    
+                    {/* ✅ FIXED: Added missing '#' before ECEAF4 */}
+                    <button 
+                      onClick={() => handleSend("Guide me to stay productive")} 
+                      className="rounded-3xl border border-[#ECEAF4] bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:border-violet-300 hover:shadow-md"
+                    >
                       <div className="mb-3 text-2xl">🚀</div>
                       <h3 className="font-semibold text-slate-900">Productivity</h3>
                       <p className="mt-2 text-sm text-slate-500">Get help with focus and routines.</p>
                     </button>
-                    <button onClick={() => handleSend("Help me achieve my goals")} className="rounded-3xl border border-[ECEAF4] bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:border-violet-300 hover:shadow-md">
+                    
+                    {/* ✅ FIXED: Added missing '#' before ECEAF4 */}
+                    <button 
+                      onClick={() => handleSend("Help me achieve my goals")} 
+                      className="rounded-3xl border border-[#ECEAF4] bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:border-violet-300 hover:shadow-md"
+                    >
                       <div className="mb-3 text-2xl">🎯</div>
                       <h3 className="font-semibold text-slate-900">Goal Support</h3>
                       <p className="mt-2 text-sm text-slate-500">Turn long-term goals into action plans.</p>
