@@ -532,6 +532,17 @@ Conversation:
         )
 
         if not allowed_types:
+            # NOTE: if you ever see 0 memories stored and suspect THIS is
+            # why, it means get_rules_for_companion(companion_name) didn't
+            # match anything in CROSS_MEMORY_RULES -- almost always a
+            # companion_name casing/spelling mismatch against the Title-Case
+            # keys there ("Aria", "Noor", "Rene", "Max", "Victor"). Log it
+            # so that's visible instead of silently returning [].
+            print(
+                f"[CROSS MEMORY EXTRACT] No allowed_types found for "
+                f"companion_name={companion_name!r} -- check it matches a "
+                f"key in CROSS_MEMORY_RULES exactly (case-sensitive)."
+            )
             return []
 
         # --------------------------------------------------
@@ -571,7 +582,8 @@ Rules:
 - Focus on stable, actionable information
 - If nothing worth remembering, return exactly: NONE
 
-Return format (STRICTLY follow this — one memory per line):
+Return format (STRICTLY follow this — one memory per line, with NOTHING
+before the opening bracket -- no dashes, no bullets, no numbering):
 [TYPE]: memory text here
 [TYPE]: another memory here
 
@@ -582,6 +594,16 @@ Conversation:
         response = await llm.ainvoke(extraction_prompt)
         raw_output = getattr(response, "content", "") or ""
         raw_output = LongTermMemoryService.clean_text(raw_output)
+
+        # DEBUG VISIBILITY: log exactly what the LLM returned, before any
+        # parsing/filtering happens. Without this, a run that silently
+        # extracts 0 memories gives zero signal as to *why* -- whether the
+        # model genuinely found nothing, or returned something the parser
+        # below rejected (e.g. a bullet-prefixed line, an unlisted type
+        # name, or unexpected formatting). This is the fastest way to
+        # diagnose the next "stored: 0" surprise, so keep it even after
+        # things are working -- it's cheap and only prints on this path.
+        print(f"[CROSS MEMORY EXTRACT] {companion_name} raw LLM output:\n{raw_output}")
 
         if not raw_output or raw_output.strip().upper() == "NONE":
             return []
@@ -597,8 +619,24 @@ Conversation:
             if not line or line.upper() == "NONE":
                 continue
 
+            # Strip common bullet/list prefixes the LLM adds despite being
+            # told not to -- gpt-4o-mini in particular tends to default to
+            # bullet style (the same habit it uses for
+            # extract_and_store_memories's prompt, which explicitly expects
+            # and strips a leading "-"). Without this, a perfectly valid
+            # line like "- [Sleep Patterns]: ..." fails the
+            # line.startswith("[") check below and gets silently dropped,
+            # undercounting real memories -- this was very likely why a
+            # clearly sleep-pattern-worthy statement produced 0 stored
+            # memories.
+            for prefix in ("- ", "* ", "• ", "-", "*", "•"):
+                if line.startswith(prefix):
+                    line = line[len(prefix):].strip()
+                    break
+
             # Parse [TYPE]: content format
             if not line.startswith("[") or "]:" not in line:
+                print(f"[CROSS MEMORY EXTRACT] Skipped unparseable line: {line!r}")
                 continue
 
             try:
@@ -615,7 +653,8 @@ Conversation:
             if memory_type not in allowed_types:
                 print(
                     f"[CROSS MEMORY EXTRACT] Skipped disallowed type: "
-                    f"{memory_type} for {companion_name}"
+                    f"{memory_type!r} for {companion_name} "
+                    f"(allowed: {allowed_types})"
                 )
                 continue
 

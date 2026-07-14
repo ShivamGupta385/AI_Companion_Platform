@@ -18,7 +18,9 @@ class TavusService:
         conversation_name: Optional[str] = None,
         document_ids: Optional[list[str]] = None,
         custom_greeting: Optional[str] = None,
-        conversational_context: Optional[str] = None
+        conversational_context: Optional[str] = None,
+        callback_url: Optional[str] = None,
+        memory_stores: Optional[list[str]] = None
         # tool_definitions REMOVED from here - Tavus does not accept this on conversations
     ) -> Dict[str, Any]:
         """
@@ -45,6 +47,12 @@ class TavusService:
             
         if conversational_context:
             payload["conversational_context"] = conversational_context
+
+        if callback_url:
+            payload["callback_url"] = callback_url
+
+        if memory_stores:
+            payload["memory_stores"] = memory_stores
 
         headers = {
             "x-api-key": settings.TAVUS_API_KEY,
@@ -249,4 +257,4 @@ class TavusService:
         print("=" * 60)
         print("[TAVUS DELETE PERSONA] STATUS:", response.status_code)
         print("[TAVUS DELETE PERSONA] RESPONSE:", response.text)
-        print("=" * 60) 
+        print("=" * 60)

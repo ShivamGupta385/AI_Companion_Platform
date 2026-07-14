@@ -218,6 +218,27 @@ class CrossMemoryService:
         """
         Build a human-readable context string from cross-agent memories.
         This gets injected into the system prompt.
+
+        FIX: previously each fact was only tied to its source companion via
+        a section header ("--- From Noor (...) ---") with the actual fact
+        listed underneath as a bare "[Stress Triggers]: ..." line. In
+        practice the persona would often fail to connect "this fact" back
+        to "that companion" when a user asked something like "do you know
+        what I talked to Noor about?" -- resulting in the model claiming it
+        had no information, even though the fact was sitting right there in
+        context. Two changes fix this:
+
+          1. Each fact line now names its source companion INLINE
+             ("From your conversation with Noor: ..."), not just in the
+             section header above it. That removes the need for the model
+             to backtrack up the prompt to find the attribution.
+
+          2. An explicit, non-negotiable instruction is now included
+             telling the companion to proactively surface this context
+             when relevant and to NEVER claim it doesn't have information
+             that is listed here. Before, `usage_hint` only explained HOW
+             to use the info (e.g. "lighten the load if they slept poorly")
+             -- it never actually said "and don't deny having it."
         """
         if not memories:
             return ""
@@ -229,8 +250,10 @@ class CrossMemoryService:
         sections = []
         sections.append(
             "=== CROSS-COMPANION INTELLIGENCE ===\n"
-            "The following context was gathered from your fellow companions "
-            "about this user. Use it to personalize your response.\n"
+            "The following context was gathered from the user's conversations "
+            "with your fellow companions. This IS information you have and "
+            "are expected to use naturally in conversation -- treat it the "
+            "same as anything the user told you directly.\n"
         )
 
         # Group memories by source companion
@@ -251,14 +274,37 @@ class CrossMemoryService:
                 content = mem.get("content", "")
                 timestamp = mem.get("timestamp", "")
                 time_str = f" ({timestamp})" if timestamp else ""
+                # FIX: name the source companion inline in the fact itself,
+                # not only in the section header above it, so the
+                # attribution survives even if this line gets referenced
+                # out of context by the model.
                 section_lines.append(
-                    f"  [{mem_type}]{time_str}: {content}"
+                    f"  From your conversation with {source} [{mem_type}]{time_str}: {content}"
                 )
 
             sections.append("\n".join(section_lines))
 
         if usage_hint:
             sections.append(f"\n--- Guidance ---\n{usage_hint}")
+
+        # FIX: explicit, hard instruction -- this is the piece that was
+        # entirely missing before. Without it, the model has the facts in
+        # context but no directive telling it those facts are usable,
+        # ownable, and shareable knowledge rather than something to stay
+        # quiet about.
+        sections.append(
+            "\n--- Rules for Using This Context ---\n"
+            "1. If the user references or asks about a conversation they had "
+            "with another companion listed above, respond using the "
+            "information provided here. Do NOT say you don't have details "
+            "or don't know what was discussed if it is listed above.\n"
+            "2. Proactively bring up relevant context from above when it "
+            "naturally fits the conversation, even if the user doesn't "
+            "explicitly ask for it.\n"
+            "3. Speak about this information naturally and in first person "
+            "(e.g. \"I know you've been feeling stressed about your terms\"), "
+            "not as if reading from a report."
+        )
 
         sections.append("=== END CROSS-COMPANION INTELLIGENCE ===\n")
 
