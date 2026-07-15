@@ -49,7 +49,7 @@ if settings.OPENAI_API_KEY:
 else:
     raise ValueError("OPENAI_API_KEY is not configured in settings")
 
-MAX_CONTEXT_CHARS = 12000
+MAX_CONTEXT_CHARS = 2500
 
 
 def run_postgres_query(sql: str) -> str:

@@ -613,68 +613,77 @@ Conversation:
         # --------------------------------------------------
         stored_memories: List[UserMemory] = []
 
-        for line in raw_output.split("\n"):
-            line = line.strip()
+        # Load existing memories for this user (keep both raw + normalized
+        # text -- fuzzy comparison below needs the normalized form, but we
+        # only add to this working list, never mutate the DB rows here)
+        existing_memories = (
+            db.query(UserMemory)
+            .filter(UserMemory.user_id == user_id)
+            .all()
+        )
 
-            if not line or line.upper() == "NONE":
+        existing_normalized = [
+            LongTermMemoryService.normalize_memory_text(m.memory_text)
+            for m in existing_memories
+            if m.memory_text
+        ]
+
+        # Similarity threshold for near-duplicate detection. 0.0-1.0 scale
+        # (difflib.SequenceMatcher.ratio()). 0.75 catches paraphrases like
+        # "User is learning Python" vs "User is currently learning Python
+        # programming" while still allowing genuinely distinct facts about
+        # the same topic through.
+        SIMILARITY_THRESHOLD = 0.75
+
+        def is_near_duplicate(candidate: str, existing_list: list[str]) -> bool:
+            import difflib
+            for existing in existing_list:
+                ratio = difflib.SequenceMatcher(None, candidate, existing).ratio()
+                if ratio >= SIMILARITY_THRESHOLD:
+                    return True
+            return False
+
+        candidate_lines = raw_output.split("\n")
+
+        for line in candidate_lines:
+            memory_text = LongTermMemoryService.clean_text(line)
+
+            if memory_text.startswith("-"):
+                memory_text = memory_text[1:].strip()
+
+            memory_text = LongTermMemoryService.clean_text(memory_text)
+
+            if not memory_text:
                 continue
 
-            # Strip common bullet/list prefixes the LLM adds despite being
-            # told not to -- gpt-4o-mini in particular tends to default to
-            # bullet style (the same habit it uses for
-            # extract_and_store_memories's prompt, which explicitly expects
-            # and strips a leading "-"). Without this, a perfectly valid
-            # line like "- [Sleep Patterns]: ..." fails the
-            # line.startswith("[") check below and gets silently dropped,
-            # undercounting real memories -- this was very likely why a
-            # clearly sleep-pattern-worthy statement produced 0 stored
-            # memories.
-            for prefix in ("- ", "* ", "• ", "-", "*", "•"):
-                if line.startswith(prefix):
-                    line = line[len(prefix):].strip()
-                    break
-
-            # Parse [TYPE]: content format
-            if not line.startswith("[") or "]:" not in line:
-                print(f"[CROSS MEMORY EXTRACT] Skipped unparseable line: {line!r}")
+            # Skip very short / junk memories
+            if len(memory_text) < 4:
                 continue
 
-            try:
-                type_end = line.index("]:")
-                memory_type = line[1:type_end].strip()
-                memory_text = line[type_end + 2:].strip()
-            except (ValueError, IndexError):
+            normalized = LongTermMemoryService.normalize_memory_text(memory_text)
+
+            if not normalized:
                 continue
 
-            if not memory_type or not memory_text:
+            # Deduplicate: exact match OR near-duplicate against everything
+            # seen so far (existing DB rows + anything just added this pass)
+            if normalized in existing_normalized:
+                continue
+            if is_near_duplicate(normalized, existing_normalized):
                 continue
 
-            # Validate type is allowed for this companion
-            if memory_type not in allowed_types:
-                print(
-                    f"[CROSS MEMORY EXTRACT] Skipped disallowed type: "
-                    f"{memory_type!r} for {companion_name} "
-                    f"(allowed: {allowed_types})"
-                )
-                continue
-
-            # Save with permission check + dedup
-            memory = LongTermMemoryService.save_cross_agent_memory(
-                db=db,
+            memory = UserMemory(
                 user_id=user_id,
                 companion_id=companion_id,
-                memory_type=memory_type,
+                memory_type="conversation_insight",
                 memory_text=memory_text,
                 source_conversation_id=conversation_id
             )
 
-            if memory:
-                stored_memories.append(memory)
+            db.add(memory)
+            stored_memories.append(memory)
+            existing_normalized.append(normalized)
 
-        if stored_memories:
-            print(
-                f"[CROSS MEMORY EXTRACT] {companion_name} stored "
-                f"{len(stored_memories)} cross-agent memories"
-            )
+        db.flush()
 
         return stored_memories
