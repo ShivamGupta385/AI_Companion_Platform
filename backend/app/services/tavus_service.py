@@ -41,10 +41,10 @@ class TavusService:
 
         if document_ids:
             payload["document_ids"] = document_ids
-            
+
         if custom_greeting:
             payload["custom_greeting"] = custom_greeting
-            
+
         if conversational_context:
             payload["conversational_context"] = conversational_context
 
