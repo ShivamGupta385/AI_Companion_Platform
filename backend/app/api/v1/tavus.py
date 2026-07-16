@@ -148,25 +148,15 @@ def create_tavus_session(
             )
         )
 
-    # Find or create active conversation
-    conversation = (
-        db.query(Conversation)
-        .filter(
-            Conversation.user_id == current_user.id,
-            Conversation.companion_id == companion.id
-        )
-        .order_by(Conversation.updated_at.desc())
-        .first()
+    # Always create a new conversation for a new session
+    conversation = Conversation(
+        user_id=current_user.id,
+        companion_id=companion.id,
+        conversation_type="chat"
     )
-    if not conversation:
-        conversation = Conversation(
-            user_id=current_user.id,
-            companion_id=companion.id,
-            conversation_type="chat"
-        )
-        db.add(conversation)
-        db.commit()
-        db.refresh(conversation)
+    db.add(conversation)
+    db.commit()
+    db.refresh(conversation)
 
     try:
         # Automatically update Tavus persona custom LLM base_url pointing to our local active tunnel and conversation ID
@@ -269,21 +259,34 @@ def end_tavus_session(
     try:
         response = TavusService.end_conversation(conversation_id)
         
-        # Update study streak
+        # Update study streak and conversation duration
         from backend.app.models.conversation import Conversation
         conv = db.query(Conversation).filter(Conversation.tavus_persona_id == conversation_id).first()
         if conv:
-            def update_study_streak(u_id):
+            def update_study_streak_and_duration(u_id, c_id):
                 from backend.app.db.session import SessionLocal
                 mem_db = SessionLocal()
                 try:
-                    # Update study streak
                     from backend.app.models.user import User
-                    from datetime import datetime, timezone, timedelta
+                    from backend.app.models.conversation import Conversation
+                    from datetime import datetime, timezone
                     
+                    now = datetime.now(timezone.utc)
+                    
+                    # Update conversation duration
+                    conversation = mem_db.query(Conversation).filter(Conversation.id == c_id).first()
+                    if conversation:
+                        # ensure started_at has timezone info before subtraction if needed
+                        started = conversation.started_at
+                        if started.tzinfo is None:
+                            started = started.replace(tzinfo=timezone.utc)
+                        duration = (now - started).total_seconds()
+                        conversation.duration_seconds = int(duration)
+                        conversation.updated_at = now
+
+                    # Update study streak
                     user = mem_db.query(User).filter(User.id == u_id).first()
                     if user:
-                        now = datetime.now(timezone.utc)
                         today = now.date()
                         
                         if not user.last_study_date:
@@ -299,14 +302,14 @@ def end_tavus_session(
                                 user.study_streak_count = 1
                                 user.last_study_date = now
                                 
-                        mem_db.commit()
+                    mem_db.commit()
                 except Exception as e:
-                    print("[TAVUS STUDY STREAK ERROR]", str(e))
+                    print("[TAVUS STUDY STREAK/DURATION ERROR]", str(e))
                 finally:
                     mem_db.close()
                     
             # Fire and forget
-            background_tasks.add_task(update_study_streak, conv.user_id)
+            background_tasks.add_task(update_study_streak_and_duration, conv.user_id, conv.id)
 
         return response
     except Exception as e:

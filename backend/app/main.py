@@ -37,6 +37,9 @@ from backend.app.api.v1.tavus import (
 from backend.app.api.v1.tavus_tools import (
     router as tavus_tools_router
 )
+from backend.app.api.v1.analytics import (
+    router as analytics_router
+)
 
 app = FastAPI(
     title="AI Companion Platform",
@@ -124,6 +127,12 @@ app.include_router(
     tavus_tools_router,
     prefix="/api/v1/tavus_tools",
     tags=["Tavus Tools"]
+)
+
+app.include_router(
+    analytics_router,
+    prefix="/api/v1/analytics",
+    tags=["Analytics"]
 )
 
 @app.get("/")

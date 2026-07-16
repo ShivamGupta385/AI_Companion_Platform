@@ -42,3 +42,7 @@ class Conversation(Base):
         server_default=func.now(),
         onupdate=func.now()
     )
+    
+    duration_seconds: Mapped[int] = mapped_column(
+        default=0
+    )
