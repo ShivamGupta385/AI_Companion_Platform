@@ -1,36 +1,79 @@
+# ==========================
 # Virtual Environments
+# ==========================
 .venv/
 venv/
 
+# ==========================
 # Environment Variables
+# ==========================
 .env
 .env.*
 
+# ==========================
 # Python
+# ==========================
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.pyd
+*.so
+.python-version
 
-# IDEs
-.vscode/
-.idea/
-
-# Logs
-*.log
-
-# Testing
+# ==========================
+# Pytest / Coverage
+# ==========================
 .pytest_cache/
 .coverage
+.coverage.*
+htmlcov/
 
-# Build
+# ==========================
+# Build Files
+# ==========================
 build/
 dist/
 *.egg-info/
 
+# ==========================
 # Database
+# ==========================
 *.db
 *.sqlite3
 
-# OS Files
+# ==========================
+# Node.js
+# ==========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================
+# Next.js
+# ==========================
+.next/
+out/
+
+# ==========================
+# UV
+# ==========================
+.uv/
+
+# ==========================
+# IDE
+# ==========================
+.vscode/
+.idea/
+
+# ==========================
+# Logs
+# ==========================
+*.log
+
+# ==========================
+# Operating System
+# ==========================
 .DS_Store
 Thumbs.db
