@@ -11,13 +11,15 @@ from fastapi import (
     UploadFile,
     File,
     HTTPException,
-    status
+    status,
+    Form
 )
 from sqlalchemy.orm import Session
 
 from backend.app.db.session import get_db
 from backend.app.models.user import User
 from backend.app.models.document import Document
+from backend.app.models.companion import Companion
 from backend.app.schemas.document_schema import DocumentResponse
 from backend.app.services.ingestion_service import ingest_document
 from backend.app.services.graph_extraction_service import (
@@ -38,6 +40,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 )
 async def upload_document(
     file: UploadFile = File(...),
+    companion_id: str | None = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -62,6 +65,24 @@ async def upload_document(
             detail="Only PDF, TXT and DOCX files are allowed"
         )
 
+    # --------------------------------------------------
+    # Validate companion_id if provided
+    # --------------------------------------------------
+    companion = None
+
+    if companion_id:
+        companion = (
+            db.query(Companion)
+            .filter(Companion.id == companion_id)
+            .first()
+        )
+
+        if not companion:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Companion not found"
+            )
+
     unique_filename = f"{uuid.uuid4()}_{file.filename}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
@@ -79,12 +100,13 @@ async def upload_document(
         # --------------------------------------------------
         document = Document(
             user_id=current_user.id,
+            companion_id=companion.id if companion else None,
             file_name=file.filename,
             file_path=file_path
         )
 
         db.add(document)
-        db.flush()       # get document.id without commit
+        db.flush()
         db.refresh(document)
 
         print("=" * 60)
@@ -92,13 +114,14 @@ async def upload_document(
         print("DOCUMENT ID:", document.id)
         print("FILE NAME:", document.file_name)
         print("USER ID:", current_user.id)
+        print("COMPANION ID:", document.companion_id)
         print("FILE PATH:", file_path)
         print("=" * 60)
 
         # --------------------------------------------------
         # 3) Vector ingestion
         # --------------------------------------------------
-        ingestion_result = ingest_document(
+        ingestion_result = await ingest_document(
             file_path=file_path,
             document_id=str(document.id),
             user_id=str(current_user.id),
@@ -115,7 +138,7 @@ async def upload_document(
         print("=" * 60)
 
         # --------------------------------------------------
-        # 4) Graph extraction (non-blocking enhancement)
+        # 4) Graph extraction
         # --------------------------------------------------
         if full_text and full_text.strip():
             try:
@@ -150,7 +173,15 @@ async def upload_document(
         db.commit()
         db.refresh(document)
 
-        return document
+        return DocumentResponse(
+            id=document.id,
+            user_id=document.user_id,
+            companion_id=document.companion_id,
+            companion_name=companion.name if companion else None,
+            file_name=document.file_name,
+            file_path=document.file_path,
+            uploaded_at=document.uploaded_at
+        )
 
     except Exception as e:
         db.rollback()
@@ -176,25 +207,44 @@ async def upload_document(
     "/",
     response_model=list[DocumentResponse]
 )
-def get_documents(
+async def get_documents(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     documents = (
-        db.query(Document)
+        db.query(Document, Companion.name.label("companion_name"))
+        .outerjoin(
+            Companion,
+            Document.companion_id == Companion.id
+        )
         .filter(Document.user_id == current_user.id)
         .order_by(Document.uploaded_at.desc())
         .all()
     )
 
-    return documents
+    result = []
+
+    for document, companion_name in documents:
+        result.append(
+            DocumentResponse(
+                id=document.id,
+                user_id=document.user_id,
+                companion_id=document.companion_id,
+                companion_name=companion_name,
+                file_name=document.file_name,
+                file_path=document.file_path,
+                uploaded_at=document.uploaded_at
+            )
+        )
+
+    return result
 
 
 @router.delete(
     "/{document_id}",
     status_code=status.HTTP_204_NO_CONTENT
 )
-def delete_document(
+async def delete_document(
     document_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

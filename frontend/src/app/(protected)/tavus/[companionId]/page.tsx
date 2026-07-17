@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { tavusService } from "@/services/tavus.service";
+import TavusAvatar from "@/components/avatar/TavusAvatar";
 
 interface TavusSessionResponse {
   conversation_id: string;
@@ -17,9 +18,8 @@ export default function TavusAvatarPage() {
   const companionId = params?.companionId as string;
 
   const [loading, setLoading] = useState(true);
-  const [session, setSession] =
-    useState<TavusSessionResponse | null>(null);
-  const [error, setError] = useState("");
+  const [session, setSession] = useState<TavusSessionResponse | null>(null);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     if (!companionId) return;
@@ -27,15 +27,11 @@ export default function TavusAvatarPage() {
     const startSession = async () => {
       try {
         setLoading(true);
-        const data = await tavusService.createSession(
-          companionId
-        );
+        const data = await tavusService.createSession(companionId);
         setSession(data);
       } catch (err: any) {
-        setError(
-          err?.response?.data?.detail ||
-            "Failed to create Tavus session"
-        );
+        const detail = err?.response?.data?.detail;
+        setError(typeof detail === "string" ? detail : "Failed to create Tavus session");
       } finally {
         setLoading(false);
       }
@@ -69,42 +65,26 @@ export default function TavusAvatarPage() {
               <h2 className="text-xl font-semibold mb-4">
                 Tavus Session Created
               </h2>
-
               <p className="text-slate-600 mb-2">
-                <strong>Conversation ID:</strong>{" "}
-                {session.conversation_id}
+                <strong>Conversation ID:</strong> {session.conversation_id}
               </p>
-
               <p className="text-slate-600 mb-2">
-                <strong>Replica ID:</strong>{" "}
-                {session.replica_id || "N/A"}
+                <strong>Replica ID:</strong> {session.replica_id || "N/A"}
               </p>
-
               <p className="text-slate-600">
-                <strong>Persona ID:</strong>{" "}
-                {session.persona_id || "N/A"}
+                <strong>Persona ID:</strong> {session.persona_id || "N/A"}
               </p>
             </div>
 
             <div className="bg-white rounded-3xl p-6 shadow-sm">
               <h2 className="text-xl font-semibold mb-4">
-                Tavus Conversation URL
+                Tavus Conversation
               </h2>
-
-              {session.conversation_url ? (
-                <a
-                  href={session.conversation_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-violet-600 underline"
-                >
-                  Open Tavus Avatar Session
-                </a>
-              ) : (
-                <p className="text-slate-500">
-                  No conversation URL returned by Tavus.
-                </p>
-              )}
+              {/* ✅ Drop in the TavusAvatar component */}
+              <TavusAvatar
+                companionId={companionId}
+                latestMessage={"Hey buddy, what do you know about me?"}
+              />
             </div>
           </div>
         )}

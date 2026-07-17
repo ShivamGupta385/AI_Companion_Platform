@@ -22,4 +22,4 @@ class TavusConversationResponse(BaseModel):
 
 
 class TavusSessionCreateRequest(BaseModel):
-    document_ids: Optional[list[str]] = None
+    document_ids: Optional[list[str]] = None

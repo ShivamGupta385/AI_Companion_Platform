@@ -4,7 +4,6 @@ import logging
 from backend.app.core.config import settings
 from backend.app.core.elevenlabs_client import client
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +31,9 @@ async def stream_audio(text: str):
         )
 
         for chunk in audio_stream:
-            yield chunk
+            if chunk:
+                yield chunk
+                await asyncio.sleep(0)
 
     except Exception as e:
 

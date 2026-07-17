@@ -3,6 +3,7 @@ from pydantic_settings import (
     SettingsConfigDict
 )
 
+from typing import Optional
 
 class Settings(BaseSettings):
     DATABASE_URL: str
@@ -27,7 +28,17 @@ class Settings(BaseSettings):
 
     TAVUS_API_KEY: str
     TAVUS_BASE_URL: str
-    BACKEND_PUBLIC_URL: str
+    TAVUS_REPLICA_ID: str
+    TAVUS_PERSONA_ID: str
+
+    LIVEAVATAR_SECRET_ID: str
+    ELEVENLABS_AGENT_ID: str
+    TAVUS_WEBHOOK_URL: Optional[str] = None
+
+    # ---------------------------------
+    # Tavus Callback URL
+    # ---------------------------------
+    BACKEND_URL: str = "http://localhost:8000"  # ⬅️ ADD THIS LINE
 
     model_config = SettingsConfigDict(
         env_file=".env",

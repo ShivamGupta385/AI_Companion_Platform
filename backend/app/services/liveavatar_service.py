@@ -1,57 +1,79 @@
-import requests
+import httpx
 from typing import Any, Dict
 
 from backend.app.core.config import settings
 
 
-def create_avatar_session() -> Dict[str, Any]:
-    """
-    Create a LiveAvatar Sandbox session token.
-    """
+LIVEAVATAR_SESSION_URL = (
+    "https://api.liveavatar.com/v1/sessions/token"
+)
 
-    url = "https://api.liveavatar.com/v1/sessions/token"
+
+async def create_avatar_session() -> Dict[str, Any]:
+    """
+    Create a plain LiveAvatar LITE session.
+
+    Conversation flow:
+
+        User
+            ↓
+        FastAPI
+            ↓
+        LangGraph
+            ↓
+        OpenAI
+            ↓
+        ElevenLabs TTS
+            ↓
+        LiveAvatar
+
+    LiveAvatar is used only for rendering the avatar.
+    """
 
     payload = {
-        "mode": "FULL",
-
-        # Sandbox mode
-        "is_sandbox": True,
-
-        # Sandbox avatar (Wayne)
-        "avatar_id": "dd73ea75-1218-4ef3-92ce-606d5f7fbc0a",
-
-        "avatar_persona": {
-            "language": "en"
-        }
+        "mode": "LITE",
+        "avatar_id": settings.LIVEAVATAR_AVATAR_ID,
+        "is_sandbox": False,
     }
 
     headers = {
         "X-API-KEY": settings.LIVEAVATAR_API_KEY,
-        "Content-Type": "application/json"
+        "Accept": "application/json",
+        "Content-Type": "application/json",
     }
 
     try:
-        response = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
 
-        print("\n" + "=" * 60)
-        print("LIVEAVATAR SANDBOX")
-        print("=" * 60)
-        print("URL:", url)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+
+            response = await client.post(
+                LIVEAVATAR_SESSION_URL,
+                headers=headers,
+                json=payload,
+            )
+
+        print("=" * 80)
+        print("[LIVEAVATAR SESSION]")
+        print("URL:", LIVEAVATAR_SESSION_URL)
         print("Payload:", payload)
-        print("Status Code:", response.status_code)
+        print("Status:", response.status_code)
         print("Response:", response.text)
-        print("=" * 60 + "\n")
+        print("=" * 80)
 
         response.raise_for_status()
 
         return response.json()
 
-    except requests.RequestException as e:
+    except httpx.HTTPStatusError as e:
+
+        raise Exception(
+            "LiveAvatar session creation failed.\n"
+            f"Status Code: {response.status_code}\n"
+            f"Response: {response.text}"
+        ) from e
+
+    except httpx.RequestError as e:
+
         raise Exception(
             f"LiveAvatar request failed: {str(e)}"
-        )
+        ) from e

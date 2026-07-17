@@ -1,8 +1,11 @@
 from langchain_openai import ChatOpenAI
-from backend.app.core.config import settings
+from dotenv import load_dotenv
 
-llm = ChatOpenAI(
+load_dotenv()
+
+llm= ChatOpenAI(
     model="gpt-4o-mini",
-    openai_api_key=settings.OPENAI_API_KEY,
-    temperature=0.7
+    temperature=0,
+    streaming=True,
 )
+

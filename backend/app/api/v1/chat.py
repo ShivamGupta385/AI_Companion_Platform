@@ -2,7 +2,8 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    status
+    Request,
+    status,
 )
 
 from sqlalchemy.orm import Session
@@ -21,7 +22,6 @@ from backend.app.schemas.message_schema import MessageResponse
 from backend.app.schemas.chat_schema import ChatRequest, ChatResponse
 
 from backend.app.core.security import get_current_user
-from backend.app.graph.graph import graph
 from backend.app.services.long_term_memory_service import (
     LongTermMemoryService
 )
@@ -32,7 +32,7 @@ router = APIRouter()
 def build_memory_buffer(
     db: Session,
     conversation_id,
-    limit: int = 12
+    limit: int = 50  # Increased to 50
 ):
     """
     Build recent conversation buffer from the SAME DB session
@@ -54,7 +54,7 @@ def build_memory_buffer(
         if msg.sender_type == "user":
             role = "human"
         elif msg.sender_type == "assistant":
-            role = "assistant"
+            role = "ai"  # FIXED: LangChain expects "ai", not "assistant"
         else:
             role = "system"
 
@@ -68,19 +68,14 @@ def build_memory_buffer(
     response_model=ChatResponse,
     status_code=status.HTTP_200_OK
 )
-def chat(
+async def chat(
+    request: Request,
     chat_data: ChatRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Chat with selected companion using LangGraph.
-
-    Features:
-    - stores chat messages in PostgreSQL
-    - builds short-term thread memory from messages table
-    - loads long-term memory through graph nodes
-    - updates long-term summaries and user memories after enough messages
     """
 
     conversation = (
@@ -134,7 +129,7 @@ def chat(
         memory_buffer = build_memory_buffer(
             db=db,
             conversation_id=conversation.id,
-            limit=12
+            limit=50  # FIXED: Explicitly pass 50
         )
 
         print("=" * 80)
@@ -147,19 +142,28 @@ def chat(
         # ---------------------------------------------------
         # 3) Invoke LangGraph with short-term memory
         # ---------------------------------------------------
-        result = graph.invoke(
+        graph = request.app.state.graph
+
+        result = await graph.ainvoke(
             {
                 "conversation_id": str(conversation.id),
                 "companion_id": str(companion.id),
                 "companion_name": companion.name,
                 "user_message": chat_data.message,
                 "user_id": str(current_user.id),
-                "user_profile": (
-                    onboarding.baseline_data
-                    if onboarding and onboarding.baseline_data
-                    else {}
-                ),
-                "memory": memory_buffer
+                "user_profile": {
+                    **(
+                        onboarding.baseline_data
+                        if onboarding and onboarding.baseline_data
+                        else {}
+                    ),
+                    "name": (
+                        onboarding.baseline_data.get("name")
+                        if onboarding and onboarding.baseline_data and onboarding.baseline_data.get("name")
+                        else current_user.full_name or current_user.username or "Unknown"
+                    ),
+                },
+                "memory": memory_buffer,
             },
             config={
                 "configurable": {
@@ -167,7 +171,6 @@ def chat(
                 }
             }
         )
-
         print("=" * 80)
         print("[CHAT] GRAPH RESULT KEYS:", result.keys() if isinstance(result, dict) else type(result))
         print("[CHAT] GRAPH RESULT:", result)
@@ -208,21 +211,29 @@ def chat(
 
         print(f"[CHAT] Message count for conversation: {message_count}")
 
-        if message_count >= 8:
+        if message_count >= 4 and message_count % 4 == 0:
             print("[CHAT] Triggering long-term memory update...")
 
-            LongTermMemoryService.upsert_conversation_summary(
+            await LongTermMemoryService.upsert_conversation_summary(
                 db=db,
                 conversation_id=conversation.id,
                 user_id=current_user.id,
                 companion_id=companion.id
             )
 
-            LongTermMemoryService.extract_and_store_memories(
+            await LongTermMemoryService.extract_and_store_memories(
                 db=db,
                 conversation_id=conversation.id,
                 user_id=current_user.id,
                 companion_id=companion.id
+            )
+
+            await LongTermMemoryService.extract_and_store_cross_agent_memories(
+                db=db,
+                conversation_id=conversation.id,
+                user_id=current_user.id,
+                companion_id=companion.id,
+                companion_name=companion.name
             )
 
         # ---------------------------------------------------
@@ -230,7 +241,10 @@ def chat(
         # ---------------------------------------------------
         db.commit()
 
-        return ChatResponse(response=ai_response)
+        return ChatResponse(
+            conversation_id=conversation.id,
+            response=ai_response,
+        )
 
     except HTTPException:
         db.rollback()
@@ -261,7 +275,7 @@ def chat(
     response_model=list[MessageResponse],
     status_code=status.HTTP_200_OK
 )
-def get_messages(
+async def get_messages(
     conversation_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -292,4 +306,4 @@ def get_messages(
         .all()
     )
 
-    return messages
+    return messages 

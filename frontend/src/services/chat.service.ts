@@ -1,5 +1,3 @@
-import Cookies from "js-cookie";
-
 import { api } from "@/lib/api";
 
 import {
@@ -7,24 +5,26 @@ import {
   ChatResponse,
 } from "@/types/chat.types";
 
+export interface ConversationDetails {
+  id: string;
+  companion_id: string;
+  companion_name?: string;
+}
+
+export interface ChatRequest {
+  conversation_id: string;
+  message: string;
+}
+
 export const chatService = {
 
   async getMessages(
     conversationId: string
   ): Promise<Message[]> {
 
-    const token =
-      Cookies.get("token");
-
     const response =
       await api.get<Message[]>(
-        `/chat/${conversationId}`,
-        {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        }
+        `/chat/${conversationId}`
       );
 
     return response.data;
@@ -35,23 +35,27 @@ export const chatService = {
     message: string
   ): Promise<ChatResponse> {
 
-    const token =
-      Cookies.get("token");
+    const payload: ChatRequest = {
+      conversation_id: conversationId,
+      message,
+    };
 
     const response =
       await api.post<ChatResponse>(
         "/chat",
-        {
-          conversation_id:
-            conversationId,
-          message,
-        },
-        {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        }
+        payload
+      );
+
+    return response.data;
+  },
+
+  async getConversationById(
+    conversationId: string
+  ): Promise<ConversationDetails> {
+
+    const response =
+      await api.get<ConversationDetails>(
+        `/conversations/${conversationId}`
       );
 
     return response.data;

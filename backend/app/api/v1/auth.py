@@ -7,6 +7,8 @@ from fastapi import (
     status
 )
 
+from fastapi.security import OAuth2PasswordRequestForm
+
 from backend.app.db.session import get_db
 from backend.app.models.user import User
 from backend.app.core.security import get_current_user
@@ -16,12 +18,7 @@ from backend.app.schemas.user_schema import (
     UserResponse
 )
 
-from backend.app.schemas.auth_schema import (
-    LoginRequest,
-    Token
-)
-
-from fastapi.security import OAuth2PasswordRequestForm
+from backend.app.schemas.auth_schema import Token
 
 from backend.app.core.security import (
     hash_password,
@@ -30,34 +27,28 @@ from backend.app.core.security import (
 )
 
 router = APIRouter()
+
+
 @router.post(
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED
 )
-def register_user(
+async def register_user(
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
 
-    existing_email = db.query(User).filter(
-        User.email == user_data.email
-    ).first()
+    existing_user = (
+        db.query(User)
+        .filter(User.email == user_data.email)
+        .first()
+    )
 
-    if existing_email:
+    if existing_user:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
-        )
-
-    existing_username = db.query(User).filter(
-        User.username == user_data.username
-    ).first()
-
-    if existing_username:
-        raise HTTPException(
-            status_code=400,
-            detail="Username already taken"
         )
 
     user = User(
@@ -76,19 +67,24 @@ def register_user(
     return user
 
 
-@router.post("/login", response_model=Token)
-def login_user(
+@router.post(
+    "/login",
+    response_model=Token
+)
+async def login_user(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
 
-    user = db.query(User).filter(
-        User.email == form_data.username
-    ).first()
+    user = (
+        db.query(User)
+        .filter(User.email == form_data.username)
+        .first()
+    )
 
     if not user:
         raise HTTPException(
-            status_code=401,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
 
@@ -97,7 +93,7 @@ def login_user(
         user.password_hash
     ):
         raise HTTPException(
-            status_code=401,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
 
@@ -109,10 +105,13 @@ def login_user(
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+
 @router.get("/me")
-def get_me(
+async def get_me(
     current_user: User = Depends(get_current_user)
 ):
+
     return {
         "id": str(current_user.id),
         "email": current_user.email,

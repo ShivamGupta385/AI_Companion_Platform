@@ -14,12 +14,13 @@ router = APIRouter()
     "/me",
     status_code=status.HTTP_200_OK
 )
-def get_current_user_profile(
+async def get_current_user_profile(
     current_user: User = Depends(get_current_user)
 ):
     """
     Return the currently authenticated user's profile.
     """
+
     return {
         "id": str(current_user.id),
         "full_name": current_user.full_name,

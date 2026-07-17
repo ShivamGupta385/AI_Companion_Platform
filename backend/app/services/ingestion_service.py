@@ -9,9 +9,10 @@ from langchain_community.document_loaders import (
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from backend.app.services.vector_store import vector_store
+from backend.app.utils.text_cleaner import clean_text
 
 
-def ingest_document(
+async def ingest_document(
     file_path: str,
     document_id: str,
     user_id: str,
@@ -57,18 +58,16 @@ def ingest_document(
 
     cleaned_documents = []
 
+    # --------------------------------------------------
+    # Clean raw document pages
+    # --------------------------------------------------
     for doc in documents:
         if not doc.page_content:
             continue
 
-        text = (
-            doc.page_content
-            .encode("utf-8", errors="ignore")
-            .decode("utf-8")
-            .strip()
-        )
+        text = clean_text(doc.page_content)
 
-        if not text:
+        if not text.strip():
             continue
 
         doc.page_content = text
@@ -82,10 +81,20 @@ def ingest_document(
             "full_text": ""
         }
 
-    full_text = "\n\n".join(
-        doc.page_content for doc in cleaned_documents
-    ).strip()
+    # --------------------------------------------------
+    # Build cleaned full text for Graph RAG
+    # --------------------------------------------------
+    full_text = clean_text(
+        "\n\n".join(
+            doc.page_content for doc in cleaned_documents
+        ).strip()
+    )
 
+    print("[INGESTION] Full text length:", len(full_text))
+
+    # --------------------------------------------------
+    # Split documents into chunks for Vector RAG
+    # --------------------------------------------------
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200
@@ -97,14 +106,9 @@ def ingest_document(
 
     for chunk in chunks:
         try:
-            text = (
-                chunk.page_content
-                .encode("utf-8", errors="ignore")
-                .decode("utf-8")
-                .strip()
-            )
+            text = clean_text(chunk.page_content)
 
-            if not text:
+            if not text.strip():
                 continue
 
             chunk.page_content = text
@@ -113,7 +117,7 @@ def ingest_document(
                 {
                     "document_id": str(document_id),
                     "user_id": str(user_id),
-                    "source": str(file_name)
+                    "source": clean_text(str(file_name))
                 }
             )
 
@@ -125,7 +129,7 @@ def ingest_document(
     print("[INGESTION] Final clean chunks:", len(clean_chunks))
 
     if clean_chunks:
-        vector_store.add_documents(clean_chunks)
+        await vector_store.aadd_documents(clean_chunks)
 
     print("=" * 60)
     print(

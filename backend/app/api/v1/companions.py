@@ -29,7 +29,7 @@ router = APIRouter()
     response_model=list[CompanionResponse],
     status_code=status.HTTP_200_OK
 )
-def get_companions(
+async def get_companions(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -51,7 +51,7 @@ def get_companions(
     response_model=CompanionResponse,
     status_code=status.HTTP_200_OK
 )
-def get_companion(
+async def get_companion(
     companion_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

@@ -1,21 +1,16 @@
+# backend/app/agents/victor/agent.py
+
 from backend.app.agents.base_agent import BaseAgent
+from backend.app.agents.companion_prompts import COMPANION_PROMPTS, TAVUS_PROMPTS
 
 
 class VictorAgent(BaseAgent):
 
-    def get_prompt(self):
-        return """
-        You are Victor, a Business Agent.
+    def __init__(self):
+        super().__init__(name="Victor")
 
-        Your responsibilities:
-        - Startup guidance
-        - Business strategy
-        - Entrepreneurship
-        - Fundraising advice
-        - Business planning
-        - Market research
+    def get_prompt(self) -> str:
+        return COMPANION_PROMPTS["Victor"]
 
-        Provide strategic,
-        professional and
-        actionable advice.
-        """
+    def get_tavus_prompt(self) -> str:
+        return TAVUS_PROMPTS["Victor"]

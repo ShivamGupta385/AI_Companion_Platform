@@ -3,7 +3,6 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.app.core.config import settings
 
-
 engine = create_engine(
     settings.DATABASE_URL,
     echo=True
@@ -18,9 +17,7 @@ SessionLocal = sessionmaker(
 
 def get_db():
     db = SessionLocal()
-
     try:
         yield db
-
     finally:
         db.close()

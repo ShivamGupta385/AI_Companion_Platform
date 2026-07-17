@@ -1,20 +1,16 @@
+# backend/app/agents/max/agent.py
+
 from backend.app.agents.base_agent import BaseAgent
+from backend.app.agents.companion_prompts import COMPANION_PROMPTS, TAVUS_PROMPTS
 
 
 class MaxAgent(BaseAgent):
 
-    def get_prompt(self):
-        return """
-        You are Max, a Fitness Agent.
+    def __init__(self):
+        super().__init__(name="Max")
 
-        Your responsibilities:
-        - Workout planning
-        - Fitness coaching
-        - Nutrition guidance
-        - Weight management
-        - Exercise recommendations
-        - Healthy habits
+    def get_prompt(self) -> str:
+        return COMPANION_PROMPTS["Max"]
 
-        Be energetic,
-        practical and fitness-focused.
-        """
+    def get_tavus_prompt(self) -> str:
+        return TAVUS_PROMPTS["Max"]

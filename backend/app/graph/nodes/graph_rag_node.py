@@ -1,9 +1,12 @@
+# backend/app/graph/nodes/graph_rag_node.py
+
 from uuid import UUID
 
 from backend.app.db.session import SessionLocal
 from backend.app.services.graph_retriever_service import (
     GraphRetrieverService
 )
+from backend.app.utils.text_cleaner import clean_text
 
 
 MEMORY_QUERY_KEYWORDS = [
@@ -25,29 +28,45 @@ MEMORY_QUERY_KEYWORDS = [
 ]
 
 
-CASUAL_CHAT_KEYWORDS = [
-    "hi",
-    "hello",
-    "hey",
-    "how are you",
-    "what's up",
-    "good morning",
-    "good evening",
-    "bye",
-    "see ya",
-    "thanks",
-    "thank you",
-    "cool",
-    "awesome"
-]
-
 def is_memory_query(query: str) -> bool:
     query_lower = query.lower().strip()
-    
-    if query_lower in CASUAL_CHAT_KEYWORDS:
-        return True
+    return any(
+        keyword in query_lower
+        for keyword in MEMORY_QUERY_KEYWORDS
+    )
 
-    return any(keyword in query_lower for keyword in MEMORY_QUERY_KEYWORDS)
+
+def _serialize_nodes(nodes) -> list:
+    """
+    Convert SQLAlchemy KnowledgeNode objects to plain dicts
+    so LangGraph's msgpack checkpointer can serialize them.
+    """
+    serialized = []
+    for node in nodes:
+        serialized.append({
+            "id": str(node.id) if node.id else None,
+            "node_name": node.node_name,
+            "node_type": node.node_type,
+            "description": node.description,
+        })
+    return serialized
+
+
+def _serialize_edges(edges) -> list:
+    """
+    Convert SQLAlchemy KnowledgeEdge objects to plain dicts
+    so LangGraph's msgpack checkpointer can serialize them.
+    """
+    serialized = []
+    for edge in edges:
+        serialized.append({
+            "id": str(edge.id) if edge.id else None,
+            "source_node_id": str(edge.source_node_id) if edge.source_node_id else None,
+            "target_node_id": str(edge.target_node_id) if edge.target_node_id else None,
+            "relation_type": edge.relation_type,
+            "evidence_text": edge.evidence_text,
+        })
+    return serialized
 
 
 def graph_rag_node(state):
@@ -60,14 +79,20 @@ def graph_rag_node(state):
     3. Build graph context text
     4. Merge vector RAG context + graph RAG context into hybrid_context
     5. Store graph fields back into graph state
+
+    IMPORTANT: All SQLAlchemy objects MUST be converted to plain
+    dicts before returning in state, because LangGraph's PostgreSQL
+    checkpointer uses msgpack which cannot serialize ORM objects.
     """
 
     db = SessionLocal()
 
     try:
         user_id = state.get("user_id")
-        query = state.get("user_message", "")
-        retrieved_context = state.get("retrieved_context", "")
+        query = clean_text(state.get("user_message", ""))
+        retrieved_context = clean_text(
+            state.get("retrieved_context", "")
+        )
 
         if not user_id or not query:
             print("[GRAPH RAG NODE] Missing user_id or query")
@@ -101,7 +126,7 @@ def graph_rag_node(state):
         # ---------------------------------------------------------
         # Retrieve graph data
         # ---------------------------------------------------------
-        graph_result = GraphRetrieverService.retrieve_graph_payload(
+        graph_result = GraphRetrieverService.retrieve_graph_context(
             db=db,
             user_id=UUID(user_id),
             query=query,
@@ -109,9 +134,18 @@ def graph_rag_node(state):
             edge_limit=20
         )
 
-        graph_context = graph_result.get("graph_context", "")
-        graph_nodes = graph_result.get("nodes", [])
-        graph_edges = graph_result.get("edges", [])
+        raw_graph_context = graph_result.get("graph_context", "")
+        raw_graph_nodes = graph_result.get("graph_nodes", []) or []
+        raw_graph_edges = graph_result.get("graph_edges", []) or []
+
+        graph_context = clean_text(raw_graph_context)
+
+        # ---------------------------------------------------------
+        # CRITICAL: Serialize SQLAlchemy objects to plain dicts
+        # LangGraph's msgpack checkpointer cannot serialize ORM objects
+        # ---------------------------------------------------------
+        graph_nodes = _serialize_nodes(raw_graph_nodes)
+        graph_edges = _serialize_edges(raw_graph_edges)
 
         # ---------------------------------------------------------
         # Build hybrid context
@@ -128,7 +162,9 @@ def graph_rag_node(state):
                 f"GRAPH RAG CONTEXT:\n{graph_context}"
             )
 
-        hybrid_context = "\n\n".join(hybrid_parts).strip()
+        hybrid_context = clean_text(
+            "\n\n".join(hybrid_parts).strip()
+        )
 
         print("=" * 60)
         print("[GRAPH RAG NODE]")
@@ -160,7 +196,9 @@ def graph_rag_node(state):
             "graph_context": "",
             "graph_nodes": [],
             "graph_edges": [],
-            "hybrid_context": state.get("retrieved_context", "")
+            "hybrid_context": clean_text(
+                state.get("retrieved_context", "")
+            )
         }
 
     finally:
