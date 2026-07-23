@@ -23,3 +23,6 @@ class TavusConversationResponse(BaseModel):
 
 class TavusSessionCreateRequest(BaseModel):
     document_ids: Optional[list[str]] = None
+
+class TavusSessionEndRequest(BaseModel):
+    duration_seconds: Optional[int] = 0

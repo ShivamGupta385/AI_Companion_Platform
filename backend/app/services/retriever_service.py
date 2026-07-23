@@ -76,7 +76,10 @@ async def retrieve_context(
         source = doc.metadata.get("source", "unknown")
         doc_id = doc.metadata.get("document_id", "unknown")
         preview = doc.page_content[:100].replace("\n", " ")
-        print(f"  Chunk {i+1}: source={source} | doc_id={doc_id} | {preview}...")
+        try:
+            print(f"  Chunk {i+1}: source={source} | doc_id={doc_id} | {preview}...")
+        except UnicodeEncodeError:
+            print(f"  Chunk {i+1}: source={source} | doc_id={doc_id} | [preview contains non-ASCII chars]")
 
     return "\n\n".join(
         doc.page_content

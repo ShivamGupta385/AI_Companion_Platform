@@ -24,12 +24,12 @@ from backend.app.core.security import get_current_user
 from backend.app.schemas.tavus_schema import (
     TavusSessionCreateResponse,
     TavusConversationResponse,
-    TavusSessionCreateRequest
+    TavusSessionCreateRequest,
+    TavusSessionEndRequest
 )
 from backend.app.services.tavus_service import TavusService
 from backend.app.graph.graph import graph
 from backend.app.services.long_term_memory_service import LongTermMemoryService
-from backend.app.services.cross_memory_service import CrossMemoryService
 from backend.app.api.v1.chat import build_memory_buffer
 from backend.app.core.config import settings
 
@@ -47,7 +47,8 @@ if settings.OPENAI_API_KEY:
     openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
     DEFAULT_MODEL = "gpt-4o-mini"
 else:
-    raise ValueError("OPENAI_API_KEY is not configured in settings")
+    openai_client = None
+    DEFAULT_MODEL = None
 
 MAX_CONTEXT_CHARS = 2500
 
@@ -209,6 +210,9 @@ def build_tavus_webhook_url() -> str | None:
     if not backend_url:
         return None
 
+    if "localhost" in backend_url or "127.0.0.1" in backend_url:
+        return None
+
     return f"{backend_url.strip().rstrip('/')}/api/v1/tavus/webhook"
 
 
@@ -250,6 +254,10 @@ async def trigger_final_memory(c_id, u_id, comp_id):
 
     mem_db = SessionLocal()
     try:
+        if not openai_client:
+            print(f"[TAVUS MEMORY] Skipping final memory extraction for conversation {c_id} because backend LLM is disabled (no OPENAI_API_KEY). Relying on Tavus native memory.")
+            return
+
         print(f"[TAVUS MEMORY] Triggering final memory extraction for conversation {c_id}...")
         await LongTermMemoryService.upsert_conversation_summary(
             db=mem_db,
@@ -264,18 +272,7 @@ async def trigger_final_memory(c_id, u_id, comp_id):
             companion_id=comp_id
         )
 
-        companion = mem_db.query(Companion).filter(Companion.id == comp_id).first()
-        if companion:
-            cross_agent_memories = await LongTermMemoryService.extract_and_store_cross_agent_memories(
-                db=mem_db,
-                conversation_id=c_id,
-                user_id=u_id,
-                companion_id=comp_id,
-                companion_name=companion.name
-            )
-            print(f"[TAVUS MEMORY] Cross-agent memories stored: {len(cross_agent_memories)}")
-        else:
-            print(f"[TAVUS MEMORY] Companion {comp_id} not found -- skipping cross-agent extraction")
+
 
         from backend.app.models.user import User
         from datetime import datetime, timezone
@@ -419,36 +416,20 @@ async def create_tavus_session(
             limit=50
         )
 
-        # 2b. Fetch real cross-agent context via CrossMemoryService.
-        # This replaces hand-filtered blocks that checked `memories` for
-        # snake_case type strings like "stress_trigger" or "sprint_goal" --
-        # those strings never match anything actually stored, because
-        # extract_and_store_cross_agent_memories / save_cross_agent_memory
-        # only ever write the Title-Case type names defined in
-        # CROSS_MEMORY_RULES (e.g. "Stress Triggers", "90-Day Sprints").
-        # On top of that mismatch, `memories` itself can't contain other
-        # companions' rows at all (see note above).
-        #
-        # This single call fixes both issues at once, and covers all five
-        # companions (Aria, Max, Victor included) since they all have
-        # `reads_from` rules defined in CROSS_MEMORY_RULES.
-        cross_memory_service = CrossMemoryService()
-        cross_agent_memories = await cross_memory_service.get_cross_agent_memories(
-            db=db,
-            user_id=current_user.id,
-            current_companion_name=companion.name,
-            current_companion_id=companion.id,
-        )
-        cross_context_string = cross_memory_service.build_cross_context_string(
-            cross_agent_memories,
-            current_companion=companion.name
-        )
-        print(f"[CROSS CONTEXT] {companion.name}: {len(cross_agent_memories)} memories found")
 
-        # 3. Build Base Context
+
+        user_display_name = current_user.full_name or current_user.email
+        # 3. Build Base Context — user identity block comes FIRST so it always
+        # wins over anything Tavus native memory may have stored from past sessions
+        # (which can include companion names like "Victor" that agents mistakenly
+        # address the user by).
         context_lines = [
-            f"User ID: {current_user.id}",
-            f"User Name: {current_user.full_name or current_user.email}"
+            "=== USER IDENTITY (CRITICAL — READ THIS FIRST) ===",
+            f"The person you are speaking with right now is: {user_display_name}",
+            f"Their User ID is: {current_user.id}",
+            "IMPORTANT: The names Victor, Max, Rene, Noor, and Aria are YOUR AI COLLEAGUES on this platform. They are NEVER the user's name. If you see those names in memory context, they refer to which companion recorded that memory, NOT to the person talking to you.",
+            f"Always address the user as '{user_display_name}' or simply 'hey' — NEVER as Victor, Max, Rene, Noor, or Aria.",
+            "=== END USER IDENTITY ===",
         ]
 
         onboarding = db.query(UserOnboarding).filter(UserOnboarding.user_id == current_user.id).first()
@@ -547,13 +528,7 @@ async def create_tavus_session(
         if other_memories:
             context_lines.append("Other Known Info: " + " | ".join(other_memories))
 
-        # 4c. Inject real cross-agent context (works for all 5 companions --
-        # Aria, Max, and Victor all have `reads_from` rules defined in
-        # CROSS_MEMORY_RULES too). This comes from CrossMemoryService, the
-        # single source of truth for both read and write rules, instead of
-        # hand-written, drifted snake_case filters.
-        if cross_context_string:
-            context_lines.append(cross_context_string)
+
 
         # 5. Recent conversation summaries
         recent_summaries = LongTermMemoryService.get_recent_conversation_summaries(
@@ -634,7 +609,7 @@ async def create_tavus_session(
             memory_stores=[memory_store_key]
         )
 
-        print("[TAVUS CREATE RESPONSE]", tavus_response)
+        print("[TAVUS CREATE RESPONSE]", str(tavus_response).encode('ascii', 'replace').decode('ascii'))
         print("[TAVUS CONTEXT LENGTH]", len(conversational_context))
         print("[TAVUS WEBHOOK URL]", webhook_url or "(none configured -- will rely on polling in end_tavus_session)")
         print("[TAVUS MEMORY STORE]", memory_store_key)
@@ -795,6 +770,7 @@ async def tavus_webhook(
 )
 def end_tavus_session(
     conversation_id: str,
+    req_body: TavusSessionEndRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -812,6 +788,10 @@ def end_tavus_session(
         conv = db.query(Conversation).filter(Conversation.tavus_conversation_id == conversation_id).first()
 
         if conv:
+            if req_body and req_body.duration_seconds:
+                conv.duration_seconds = req_body.duration_seconds
+                db.commit()
+
             # The webhook is the authoritative trigger for memory extraction
             # whenever one is configured, since it's the one that actually
             # has the real transcript by the time it fires. Only fall back

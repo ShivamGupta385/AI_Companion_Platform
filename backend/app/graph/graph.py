@@ -2,7 +2,6 @@ from langgraph.graph import StateGraph, END, START
 
 from backend.app.graph.state import CompanionState
 
-from backend.app.graph.nodes.cross_memory_node import cross_memory_node
 from backend.app.graph.nodes.memory_node import memory_node
 from backend.app.graph.nodes.history_node import history_node
 from backend.app.graph.nodes.long_term_memory_node import long_term_memory_node
@@ -17,7 +16,6 @@ def build_graph():
     graph_builder = StateGraph(CompanionState)
 
     # Nodes
-    graph_builder.add_node("cross_memory", cross_memory_node)
     graph_builder.add_node("memory", memory_node)
     graph_builder.add_node("history", history_node)
     graph_builder.add_node("long_term_memory", long_term_memory_node)
@@ -28,10 +26,9 @@ def build_graph():
     graph_builder.add_node("llm", llm_node)
 
     # Entry Point
-    graph_builder.add_edge(START, "cross_memory")
+    graph_builder.add_edge(START, "memory")
 
     # Flow
-    graph_builder.add_edge("cross_memory", "memory")
     graph_builder.add_edge("memory", "history")
     graph_builder.add_edge("history", "long_term_memory")
     graph_builder.add_edge("long_term_memory", "documents")

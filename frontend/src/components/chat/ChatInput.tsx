@@ -16,6 +16,7 @@ interface ChatInputProps {
   loading: boolean;
   autoSendVoice?: boolean;
   onDocumentUploaded?: (documentName: string) => void;
+  companionId?: string;
 }
 
 export default function ChatInput({
@@ -23,6 +24,7 @@ export default function ChatInput({
   loading,
   autoSendVoice = false,
   onDocumentUploaded,
+  companionId,
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [listening, setListening] = useState(false);
@@ -121,7 +123,7 @@ export default function ChatInput({
       setSelectedFile(file);
       setUploading(true);
 
-      const result = await ragService.uploadDocument(file);
+      const result = await ragService.uploadDocument(file, companionId || "");
       console.log("Uploaded:", result);
       onDocumentUploaded?.(result.file_name);
     } catch (error) {

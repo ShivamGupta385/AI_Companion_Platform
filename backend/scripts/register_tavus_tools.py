@@ -6,11 +6,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TAVUS_API_KEY = os.getenv("TAVUS_API_KEY")
-BACKEND_PUBLIC_URL = os.getenv("BACKEND_PUBLIC_URL")
+BACKEND_PUBLIC_URL = os.getenv("BACKEND_URL")
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 if not TAVUS_API_KEY or not BACKEND_PUBLIC_URL or not SECRET_KEY:
-    print("Error: Missing TAVUS_API_KEY, BACKEND_PUBLIC_URL, or SECRET_KEY in .env")
+    print("Error: Missing TAVUS_API_KEY, BACKEND_URL, or SECRET_KEY in .env")
     exit(1)
 
 TAVUS_API_URL = "https://tavusapi.com/v2/tools"
@@ -58,7 +58,7 @@ def main():
             "delivery": {
                 "app_message": False,
                 "api": {
-                    "url": f"{BACKEND_PUBLIC_URL}/tavus_tools/query_database",
+                    "url": f"{BACKEND_PUBLIC_URL}/api/v1/tavus_tools/query_database",
                     "method": "POST",
                     "timeout": 20,
                     "auth": {
@@ -96,7 +96,7 @@ def main():
             "delivery": {
                 "app_message": False,
                 "api": {
-                    "url": f"{BACKEND_PUBLIC_URL}/tavus_tools/search_documents",
+                    "url": f"{BACKEND_PUBLIC_URL}/api/v1/tavus_tools/search_documents",
                     "method": "POST",
                     "timeout": 20,
                     "auth": {

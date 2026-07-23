@@ -8,7 +8,9 @@ import { api } from "@/lib/api";
 interface HeatmapData {
   date: string;
   duration_minutes: number;
+  duration_seconds?: number;
   agents: string[];
+  last_time?: string;
 }
 
 interface AnalyticsResponse {

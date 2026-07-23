@@ -7,6 +7,7 @@ interface ContributionHeatmapProps {
   data: {
     date: string;
     duration_minutes: number;
+    duration_seconds?: number;
     agents: string[];
     last_time?: string;
   }[];
@@ -52,11 +53,20 @@ export default function ContributionHeatmap({ data }: ContributionHeatmapProps) 
 
   const handleMouseEnter = (e: React.MouseEvent, date: Date, stat: any) => {
     const rect = (e.target as HTMLElement).getBoundingClientRect();
-    const count = stat ? (stat.duration_minutes === 0 ? 1 : stat.duration_minutes) : 0;
     
-    let content = `${count} minutes on ${format(date, 'MMM do, yyyy')}`;
-    if (stat && stat.agents && stat.agents.length > 0) {
-      content = `Date: ${format(date, 'MMM do, yyyy')}\nDuration: ${count} min\nAgents: ${stat.agents.join(", ")}\nLast Active: ${stat.last_time || "N/A"}`;
+    let content = `0 minutes on ${format(date, 'MMM do, yyyy')}`;
+    
+    if (stat) {
+      const totalSecs = stat.duration_seconds || (stat.duration_minutes * 60) || 0;
+      const m = Math.floor(totalSecs / 60);
+      const s = Math.floor(totalSecs % 60);
+      const timeStr = m > 0 ? `${m}m ${s}s` : `${s}s`;
+      
+      content = `${timeStr} on ${format(date, 'MMM do, yyyy')}`;
+      
+      if (stat.agents && stat.agents.length > 0) {
+        content = `Date: ${format(date, 'MMM do, yyyy')}\nTotal Time: ${timeStr}\n\nBreakdown:\n• ${stat.agents.join("\n• ")}\n\nLast Active: ${stat.last_time || "N/A"}`;
+      }
     }
 
     setTooltipData({

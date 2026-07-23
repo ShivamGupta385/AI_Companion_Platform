@@ -36,22 +36,14 @@ Interests: {profile.get('interests', 'Unknown')}
 """
 
     # --------------------------------------------------
-    # Cross-agent context (from cross_memory_node)
+    # The personalized prompt injection
     # --------------------------------------------------
-    cross_agent_context = state.get("cross_agent_context", "")
-    cross_memory_section = ""
-
-    if cross_agent_context and cross_agent_context.strip():
-        cross_memory_section = f"""
-{cross_agent_context}
-"""
-
     personalized_prompt = f"""
 {prompt}
 
 USER PROFILE (background information, NOT conversation history):
 {profile_context}
-{cross_memory_section}
+
 You are chatting with the user inside an ongoing conversation thread.
 
 IMPORTANT BEHAVIOR RULES:

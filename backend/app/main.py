@@ -11,6 +11,8 @@ from backend.app.api.v1.chat import router as chat_router
 from backend.app.api.v1.user_onboarding import (
     router as user_onboarding_router,
 )
+from backend.app.api.v1.analytics import router as analytics_router
+
 
 from backend.app.api.v1 import tts
 from backend.app.api.v1 import documents
@@ -23,6 +25,9 @@ from backend.app.api.v1.heygenavatar import (
 )
 from backend.app.api.v1.tavus import (
     router as tavus_router,
+)
+from backend.app.api.v1.tavus_tools import (
+    router as tavus_tools_router,
 )
 from backend.app.api.v1.openai_router import (
     router as openai_router,
@@ -89,6 +94,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(users_router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(user_onboarding_router, prefix="/api/v1/user-onboarding", tags=["User Onboarding"])
+app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["Analytics"])
 
 # --- COMPANIONS & CHAT ---
 app.include_router(companion_router, prefix="/api/v1/companions", tags=["Companions"])
@@ -108,6 +114,7 @@ app.include_router(heygen_router, prefix="/api/v1/heygenavatar", tags=["HeyGen A
 # inside tavus.py should be at "/v1/chat/completions" so the final URL becomes:
 # http://localhost:8000/api/v1/tavus/v1/chat/completions
 app.include_router(tavus_router, prefix="/api/v1/tavus", tags=["Tavus Avatar"])
+app.include_router(tavus_tools_router, prefix="/api/v1/tavus_tools", tags=["Tavus Tools"])
 
 # --- OPENAI ROUTER ---
 app.include_router(openai_router, prefix="/api/v1/openai", tags=["OpenAI Compatible API"])

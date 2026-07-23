@@ -242,13 +242,12 @@ export default function DashboardPage() {
         {/* FEATURE CARDS */}
         <div className="grid lg:grid-cols-3 gap-6 mt-8">
           {/* ONBOARDING */}
-          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-140">
-            <div className="h-55 flex items-center justify-center">
+          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-full">
+            <div className="relative w-full h-[220px] flex items-center justify-center">
               <Image
                 src="/dashboard/onboarding.png"
                 alt="onboarding"
-                width={320}
-                height={220}
+                fill
                 className="object-contain"
               />
             </div>
@@ -280,13 +279,12 @@ export default function DashboardPage() {
           </div>
 
           {/* COMPANIONS */}
-          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-140">
-            <div className="h-55 flex items-center justify-center">
+          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-full">
+            <div className="relative w-full h-[220px] flex items-center justify-center">
               <Image
                 src="/dashboard/robot.png"
                 alt="companion"
-                width={320}
-                height={220}
+                fill
                 className="object-contain"
               />
             </div>
@@ -318,18 +316,15 @@ export default function DashboardPage() {
           </div>
 
           {/* SHARED DOCUMENTS */}
-          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-140">
+          <div className="bg-white rounded-[32px] p-6 shadow-sm flex flex-col h-full">
 
-            <div className="h-55 items-center justify-center">
-
+            <div className="relative w-full h-[220px] flex items-center justify-center">
               <Image
-                src="/dashboard/documents.png"
-                alt="Shared Documents"
-                width={320}
-                height={220}
-                className="object-contain"
+                src="/dashboard/upload-document.jpg"
+                alt="manage documents"
+                fill
+                className="object-contain rounded-[24px]"
               />
-
             </div>
 
             <h2 className="mt-4 text-3xl font-semibold text-slate-900">

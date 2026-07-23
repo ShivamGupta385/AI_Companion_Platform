@@ -101,7 +101,7 @@ async def search_documents(request: Request):
         
     try:
         from backend.app.services.retriever_service import retrieve_context
-        context = retrieve_context(query, user_id)
+        context = await retrieve_context(query, user_id)
         if not context or not context.strip():
             return {"result": "No relevant information found in the user's documents."}
         return {"result": context}

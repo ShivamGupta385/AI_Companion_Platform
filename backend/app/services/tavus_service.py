@@ -61,7 +61,7 @@ class TavusService:
 
         print("=" * 60)
         print("[TAVUS CREATE] URL:", url)
-        print("[TAVUS CREATE] PAYLOAD:", payload)
+        print("[TAVUS CREATE] PAYLOAD:", str(payload).encode('ascii', 'replace').decode('ascii'))
         print("=" * 60)
 
         response = requests.post(
@@ -73,7 +73,7 @@ class TavusService:
 
         print("=" * 60)
         print("[TAVUS CREATE] STATUS:", response.status_code)
-        print("[TAVUS CREATE] RESPONSE:", response.text)
+        print("[TAVUS CREATE] RESPONSE:", str(response.text).encode('ascii', 'replace').decode('ascii'))
         print("=" * 60)
 
         if response.status_code >= 400:

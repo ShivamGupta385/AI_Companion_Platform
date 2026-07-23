@@ -8,11 +8,13 @@ interface RagSidebarProps {
     id: string,
     name: string
   ) => void;
+  companionId?: string;
 }
 
 export default function RagSidebar({
   selectedDocumentId,
   onSelectDocument,
+  companionId,
 }: RagSidebarProps) {
   return (
     <div
@@ -103,7 +105,7 @@ export default function RagSidebar({
             Upload Documents
           </h3>
 
-          <DocumentUploader />
+          <DocumentUploader companionId={companionId || ""} />
         </div>
 
         {/* Documents Section */}

@@ -33,12 +33,12 @@ export const tavusService = {
     return response.data;
   },
 
-  async endSession(conversationId: string) {
+  async endSession(conversationId: string, durationSeconds: number = 0) {
     const token = Cookies.get("token");
 
     const response = await api.post(
       `/tavus/session/${conversationId}/end`,
-      {},
+      { duration_seconds: durationSeconds },
       {
         headers: {
           Authorization: `Bearer ${token}`,

@@ -130,20 +130,13 @@ export default function ChatPage() {
               <div className="max-w-6xl mx-auto px-2 py-2">
                 
                 {/* Tavus Avatar */}
-                {companionName === "Aria" && companionId && (
+                {companionId && (
                   <div className="mb-8 relative">
                     {avatarEnabled ? (
                       <>
-                        <div className="absolute top-4 right-4 z-10">
-                          <button
-                            onClick={() => setAvatarEnabled(false)}
-                            className="px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold shadow-md transition cursor-pointer"
-                          >
-                            End Video Call
-                          </button>
-                        </div>
                         <TavusAvatar
                           companionId={companionId}
+                          companionName={companionName || ""}
                         />
                       </>
                     ) : (

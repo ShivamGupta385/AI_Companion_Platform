@@ -83,7 +83,7 @@ export default function TavusAvatarPage() {
               {/* ✅ Drop in the TavusAvatar component */}
               <TavusAvatar
                 companionId={companionId}
-                latestMessage={"Hey buddy, what do you know about me?"}
+                companionName="Companion"
               />
             </div>
           </div>

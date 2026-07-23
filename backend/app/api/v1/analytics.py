@@ -22,40 +22,66 @@ def get_activity_heatmap(
     Calculates total days active and fetches streaks from the user model.
     """
     try:
-        # Group conversations by date (YYYY-MM-DD)
-        # In postgres, we can use func.date(Conversation.started_at)
         from sqlalchemy import cast, Date
-        daily_stats = (
+        
+        # Fetch raw records and aggregate in Python for easier breakdown
+        raw_conversations = (
             db.query(
                 cast(Conversation.started_at, Date).label("date"),
-                func.sum(Conversation.duration_seconds).label("total_seconds"),
-                func.array_agg(Companion.name).label("companions"),
-                func.max(Conversation.updated_at).label("last_conversation")
+                Conversation.duration_seconds,
+                Companion.name.label("companion_name"),
+                Conversation.updated_at
             )
             .join(Companion, Conversation.companion_id == Companion.id)
             .filter(Conversation.user_id == current_user.id)
-            .group_by(cast(Conversation.started_at, Date))
             .all()
         )
 
-        heatmap_data = []
-        for stat in daily_stats:
-            # Postgres array_agg might contain duplicates if multiple sessions with same agent
-            unique_companions = list(set(stat.companions))
-            duration_minutes = int((stat.total_seconds or 0) / 60)
-            
-            # Date might be a string or datetime.date depending on driver, ensure string YYYY-MM-DD
-            if hasattr(stat.date, "strftime"):
-                date_str = stat.date.strftime("%Y-%m-%d")
+        date_aggregations = {}
+        for row in raw_conversations:
+            if hasattr(row.date, "strftime"):
+                date_str = row.date.strftime("%Y-%m-%d")
             else:
-                date_str = str(stat.date)[:10]
+                date_str = str(row.date)[:10]
 
-            last_time = stat.last_conversation.strftime("%I:%M %p").lstrip('0') if stat.last_conversation else ""
+            if date_str not in date_aggregations:
+                date_aggregations[date_str] = {
+                    "total_seconds": 0,
+                    "agents_map": {},
+                    "last_conversation": row.updated_at
+                }
+            
+            agg = date_aggregations[date_str]
+            duration = row.duration_seconds or 0
+            agg["total_seconds"] += duration
+            
+            comp_name = row.companion_name
+            if comp_name not in agg["agents_map"]:
+                agg["agents_map"][comp_name] = 0
+            agg["agents_map"][comp_name] += duration
+            
+            if row.updated_at and (not agg["last_conversation"] or row.updated_at > agg["last_conversation"]):
+                agg["last_conversation"] = row.updated_at
+
+        heatmap_data = []
+        for date_str, agg in date_aggregations.items():
+            duration_minutes = int(agg["total_seconds"] / 60)
+            
+            # Format agent breakdown string like "Aria (2m 30s)"
+            agents_list = []
+            for name, secs in agg["agents_map"].items():
+                m = int(secs / 60)
+                s = int(secs % 60)
+                time_str = f"{m}m {s}s" if m > 0 else f"{s}s"
+                agents_list.append(f"{name} ({time_str})")
+
+            last_time = agg["last_conversation"].strftime("%I:%M %p").lstrip('0') if agg["last_conversation"] else ""
             
             heatmap_data.append({
                 "date": date_str,
                 "duration_minutes": duration_minutes,
-                "agents": unique_companions,
+                "duration_seconds": agg["total_seconds"],
+                "agents": agents_list,
                 "last_time": last_time
             })
 

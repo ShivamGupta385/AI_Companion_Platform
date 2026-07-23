@@ -1,73 +1,72 @@
 "use client";
 
 import { useState } from "react";
-import { ragService } from "@/services/rag.service";
 
-interface DocumentUploaderProps {
-  companionId: string;
-  companionName?: string;
-  onUploadSuccess?: () => void;
-}
+import {
+  ragService
+} from "@/services/rag.service";
 
-export default function DocumentUploader({
-  companionId,
-  companionName,
-  onUploadSuccess,
-}: DocumentUploaderProps) {
-  const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+export default function DocumentUploader() {
+
+  const [file, setFile] =
+    useState<File | null>(
+      null
+    );
+
+  const [loading, setLoading] =
+    useState(false);
 
   const handleUpload = async () => {
-    if (!file) {
-      alert("Please select a file");
-      return;
-    }
 
-    if (!companionId) {
-      alert("Companion ID is missing");
-      return;
-    }
+  if (!file) {
 
-    try {
-      setLoading(true);
+    alert("Please select a file");
 
-      console.log("Uploading:", file.name);
-      console.log("Companion ID:", companionId);
-      console.log("Companion Name:", companionName);
+    return;
+  }
 
-      const result = await ragService.uploadDocument(
-        file,
-        companionId
+  try {
+
+    setLoading(true);
+
+    console.log("Uploading:", file.name);
+
+    const result =
+      await ragService.uploadDocument(
+        file
       );
 
-      console.log("UPLOAD RESULT:", result);
+    console.log(result);
 
-      alert(
-        `${result.file_name} uploaded successfully${
-          companionName ? ` for ${companionName}` : ""
-        }`
-      );
+    alert(
+      `${result.file_name} uploaded successfully`
+    );
 
-      setFile(null);
+    setFile(null);
 
-      if (onUploadSuccess) {
-        onUploadSuccess();
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Upload failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (error) {
+
+    console.error(error);
+
+    alert("Upload failed");
+
+  } finally {
+
+    setLoading(false);
+  }
+};
 
   return (
     <div className="space-y-4">
+
       <input
         type="file"
         accept=".pdf,.txt,.docx"
         onChange={(e) =>
-          setFile(e.target.files?.[0] || null)
+          setFile(
+            e.target.files?.[0] ||
+            null
+          )
         }
       />
 
@@ -75,15 +74,18 @@ export default function DocumentUploader({
         onClick={handleUpload}
         disabled={loading}
         className="
-          rounded-lg
           bg-black
+          text-white
           px-4
           py-2
-          text-white
+          rounded-lg
         "
       >
-        {loading ? "Uploading..." : "Upload Document"}
+        {loading
+          ? "Uploading..."
+          : "Upload Document"}
       </button>
+
     </div>
   );
 }
