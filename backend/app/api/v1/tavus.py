@@ -28,7 +28,6 @@ from backend.app.schemas.tavus_schema import (
     TavusSessionEndRequest
 )
 from backend.app.services.tavus_service import TavusService
-from backend.app.graph.graph import graph
 from backend.app.services.long_term_memory_service import LongTermMemoryService
 from backend.app.api.v1.chat import build_memory_buffer
 from backend.app.core.config import settings
@@ -254,26 +253,6 @@ async def trigger_final_memory(c_id, u_id, comp_id):
 
     mem_db = SessionLocal()
     try:
-        if not openai_client:
-            print(f"[TAVUS MEMORY] Skipping final memory extraction for conversation {c_id} because backend LLM is disabled (no OPENAI_API_KEY). Relying on Tavus native memory.")
-            return
-
-        print(f"[TAVUS MEMORY] Triggering final memory extraction for conversation {c_id}...")
-        await LongTermMemoryService.upsert_conversation_summary(
-            db=mem_db,
-            conversation_id=c_id,
-            user_id=u_id,
-            companion_id=comp_id
-        )
-        await LongTermMemoryService.extract_and_store_memories(
-            db=mem_db,
-            conversation_id=c_id,
-            user_id=u_id,
-            companion_id=comp_id
-        )
-
-
-
         from backend.app.models.user import User
         from datetime import datetime, timezone
 
@@ -400,36 +379,20 @@ async def create_tavus_session(
         elif companion_name_lower == "victor":
             custom_greeting = "Good to see you. I'm Victor. Tell me what you're building, and don't sugarcoat it."
 
-        # 2. Fetch all memories for this user
-        # NOTE: this only ever returns rows where companion_id == THIS
-        # companion OR companion_id IS NULL (see get_user_memories). It
-        # will NEVER contain another companion's cross-agent memories,
-        # since save_cross_agent_memory stores those with
-        # companion_id = <the writing companion's id>. Cross-agent context
-        # is fetched separately in step 2b below via CrossMemoryService,
-        # which queries by the correct source companion_id per the
-        # CROSS_MEMORY_RULES read/write map.
-        memories = LongTermMemoryService.get_user_memories(
-            db=db,
-            user_id=current_user.id,
-            companion_id=companion.id,
-            limit=50
-        )
-
-
-
+        # 2. Build Base Context with Hive Mind Protocol
         user_display_name = current_user.full_name or current_user.email
-        # 3. Build Base Context — user identity block comes FIRST so it always
-        # wins over anything Tavus native memory may have stored from past sessions
-        # (which can include companion names like "Victor" that agents mistakenly
-        # address the user by).
+        
         context_lines = [
-            "=== USER IDENTITY (CRITICAL — READ THIS FIRST) ===",
+            "=== USER IDENTITY & HIVE MIND (CRITICAL — READ THIS FIRST) ===",
             f"The person you are speaking with right now is: {user_display_name}",
             f"Their User ID is: {current_user.id}",
-            "IMPORTANT: The names Victor, Max, Rene, Noor, and Aria are YOUR AI COLLEAGUES on this platform. They are NEVER the user's name. If you see those names in memory context, they refer to which companion recorded that memory, NOT to the person talking to you.",
+            "IMPORTANT: The names Victor, Max, Rene, Noor, and Aria are YOUR AI COLLEAGUES on this platform. They are NEVER the user's name.",
             f"Always address the user as '{user_display_name}' or simply 'hey' — NEVER as Victor, Max, Rene, Noor, or Aria.",
-            "=== END USER IDENTITY ===",
+            "=== HIVE MIND PROTOCOL ===",
+            "You share a single, unified memory brain with your colleagues (Aria, Rene, Noor, Max, Victor).",
+            "You instantly know EVERYTHING the user has ever told ANY of them through your native memory store.",
+            "NEVER claim you don't have access to another companion's memory. If the user asks about something they told Aria, use your shared memory context to answer.",
+            "=== END USER IDENTITY & HIVE MIND ===",
         ]
 
         onboarding = db.query(UserOnboarding).filter(UserOnboarding.user_id == current_user.id).first()
@@ -441,108 +404,18 @@ async def create_tavus_session(
                     context_lines.append(f"{formatted_key}: {value}")
             context_lines.append("----------------------------------")
 
-        # 4. Build Companion-Specific Memory Context
-        # NOTE: the cross-agent filtering that used to live inline in the
-        # Rene and Noor branches below (cross_notes / cross_agent_context)
-        # has been removed -- it's now handled generically for every
-        # companion via cross_context_string, appended in step 4c below.
-        if companion_name_lower == "aria":
-            weak_spots = [m.memory_text for m in memories if m.memory_type == "academic_weak_spot"]
-            strengths = [m.memory_text for m in memories if m.memory_type == "academic_strength"]
-            styles = [m.memory_text for m in memories if m.memory_type == "learning_style"]
-            if weak_spots: context_lines.append("Academic Weak Spots: " + ", ".join(weak_spots))
-            if strengths: context_lines.append("Academic Strengths: " + ", ".join(strengths))
-            if styles: context_lines.append("Learning Styles: " + ", ".join(styles))
-
-        elif companion_name_lower == "rene":
-            life_maps = [m.memory_text for m in memories if m.memory_type == "life_map"]
-            sprints = [m.memory_text for m in memories if m.memory_type == "sprint_goal"]
-            habits = [m.memory_text for m in memories if m.memory_type == "habit"]
-
-            if life_maps: context_lines.append("Life Map: " + ", ".join(life_maps))
-            if sprints: context_lines.append("Active 90-Day Sprints: " + ", ".join(sprints))
-            if habits: context_lines.append("Tracked Habits: " + ", ".join(habits))
-
-        # ====================================================================
-        # NOOR IMPLEMENTATION (FULLY UPDATED WITH DB ACCESS)
-        # ====================================================================
-        elif companion_name_lower == "noor":
-            sleep_patterns = [m.memory_text for m in memories if m.memory_type == "sleep_pattern"]
-            stress_triggers = [m.memory_text for m in memories if m.memory_type == "stress_trigger"]
-            mood_trends = [m.memory_text for m in memories if m.memory_type == "mood_trend"]
-
-            if sleep_patterns: context_lines.append("Known Sleep Patterns: " + ", ".join(sleep_patterns))
-            if stress_triggers: context_lines.append("Known Stress Triggers: " + ", ".join(stress_triggers))
-            if mood_trends: context_lines.append("Mood Trends: " + ", ".join(mood_trends))
-
-            # ---> DATABASE ACCESS PROTOCOL <---
-            # NOTE: as written, this only tells the persona (in plain text)
-            # that it "has" a SQL tool -- it does not actually wire
-            # run_postgres_query() as a callable tool via Tavus's tool-calling
-            # config. Either this text has no effect, or (if a differently-named
-            # tool is wired elsewhere) you're granting a live voice session
-            # broad SELECT access to your DB via a text instruction. Worth
-            # reviewing separately from this change.
-            context_lines.append("--- DATABASE ACCESS PROTOCOL ---")
-            context_lines.append("You have access to a tool that can run SQL queries to look up historical user data to deeply personalize your mindfulness coaching.")
-            context_lines.append("SAFE TABLES: 'user_onboarding' (baseline_data), 'user_memories' (memory_text, memory_type), 'conversation_summaries' (summary_text).")
-            context_lines.append("STRICT RULES: 1. ONLY use SELECT queries. 2. NEVER query 'password_hash' or user credentials. 3. Use this to find deep trends (e.g., 'SELECT memory_text FROM user_memories WHERE memory_type = 'mood_trend'').")
-            context_lines.append("---------------------------------")
-
+        # 4. Build Companion-Specific Safety Context
+        if companion_name_lower == "noor":
             # CRITICAL SAFETY PROTOCOL (Injected forcefully into context)
             context_lines.append("--- CRITICAL SAFETY PROTOCOL ---")
             context_lines.append("You are NOT a therapist. NEVER provide therapy, clinical diagnosis, or treatment for mental illness.")
             context_lines.append("CRISIS DETECTION: If the user expresses self-harm, severe depression, or suicidal ideation, you MUST IMMEDIATELY pivot and say: 'I care about you deeply, and because of that, I need to connect you with someone who has the exact right tools for this moment. Can I share a resource with you?'")
             context_lines.append("Provide professional hotline info if a crisis is detected. Do not attempt to 'fix' severe clinical issues.")
             context_lines.append("---------------------------------")
-        # ====================================================================
-
-        elif companion_name_lower == "max":
-            fitness_levels = [m.memory_text for m in memories if m.memory_type == "fitness_level"]
-            prs = [m.memory_text for m in memories if m.memory_type == "personal_record"]
-            injuries = [m.memory_text for m in memories if m.memory_type == "injury_history"]
-            if fitness_levels: context_lines.append("Fitness Level: " + ", ".join(fitness_levels))
-            if prs: context_lines.append("Personal Records: " + ", ".join(prs))
-            if injuries: context_lines.append("Injury History: " + ", ".join(injuries))
-
-        elif companion_name_lower == "victor":
-            business_goals = [m.memory_text for m in memories if m.memory_type == "business_goal"]
-            milestones = [m.memory_text for m in memories if m.memory_type == "strategic_milestone"]
-            if business_goals: context_lines.append("Business Goals: " + ", ".join(business_goals))
-            if milestones: context_lines.append("Strategic Milestones: " + ", ".join(milestones))
-
-        # 4b. Catch-all for other memory types
-        known_types_by_companion = {
-            "aria": {"academic_weak_spot", "academic_strength", "learning_style"},
-            "rene": {"life_map", "sprint_goal", "habit"},
-            "noor": {"sleep_pattern", "stress_trigger", "mood_trend"},
-            "max": {"fitness_level", "personal_record", "injury_history"},
-            "victor": {"business_goal", "strategic_milestone"},
-        }
-        known_types = known_types_by_companion.get(companion_name_lower, set())
-        other_memories = [
-            f"[{m.memory_type}] {m.memory_text}"
-            for m in memories
-            if m.memory_type not in known_types
-        ]
-        if other_memories:
-            context_lines.append("Other Known Info: " + " | ".join(other_memories))
 
 
 
-        # 5. Recent conversation summaries
-        recent_summaries = LongTermMemoryService.get_recent_conversation_summaries(
-            db=db,
-            user_id=current_user.id,
-            companion_id=companion.id,
-            limit=3
-        )
-        if recent_summaries:
-            context_lines.append("--- RECENT CONVERSATION SUMMARIES ---")
-            for s in recent_summaries:
-                if s.summary_text:
-                    context_lines.append(f"- {s.summary_text}")
-            context_lines.append("--------------------------------------")
+
 
         # 6. Recent raw message history
         memory_buffer = build_memory_buffer(

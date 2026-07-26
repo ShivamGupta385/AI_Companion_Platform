@@ -2,8 +2,7 @@ import os
 import uuid
 from sqlalchemy import or_
 
-from backend.app.models.knowledge_node import KnowledgeNode
-from backend.app.models.knowledge_edge import KnowledgeEdge
+
 
 from fastapi import (
     APIRouter,
@@ -20,9 +19,7 @@ from backend.app.models.user import User
 from backend.app.models.document import Document
 from backend.app.schemas.document_schema import DocumentResponse
 from backend.app.services.ingestion_service import ingest_document
-from backend.app.services.graph_extraction_service import (
-    GraphExtractionService
-)
+
 from backend.app.core.security import get_current_user
 
 router = APIRouter()
@@ -113,36 +110,6 @@ async def upload_document(
         print("CHUNK COUNT:", chunk_count)
         print("FULL TEXT LENGTH:", len(full_text))
         print("=" * 60)
-
-        # --------------------------------------------------
-        # 4) Graph extraction (non-blocking enhancement)
-        # --------------------------------------------------
-        if full_text and full_text.strip():
-            try:
-                graph_text = full_text[:12000]
-
-                graph_payload = await GraphExtractionService.extract_and_store_graph(
-                    db=db,
-                    user_id=current_user.id,
-                    text=graph_text,
-                    source_document_id=document.id
-                )
-
-                print("=" * 60)
-                print("[GRAPH EXTRACTION COMPLETE]")
-                print("NODES EXTRACTED:", len(graph_payload.nodes))
-                print("EDGES EXTRACTED:", len(graph_payload.edges))
-                print("=" * 60)
-
-            except Exception as graph_error:
-                print("=" * 60)
-                print("[GRAPH EXTRACTION ERROR]")
-                print(str(graph_error))
-                print("Document upload + vector ingestion succeeded.")
-                print("Skipping graph extraction failure.")
-                print("=" * 60)
-        else:
-            print("[GRAPH EXTRACTION] Skipped because full_text is empty")
 
         # --------------------------------------------------
         # 5) Commit final transaction once

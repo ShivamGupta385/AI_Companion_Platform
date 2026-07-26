@@ -233,6 +233,9 @@ Conversation:
 {conversation_text}
 """
 
+        if not llm:
+            return None
+
         response = await llm.ainvoke(summary_prompt)
 
         raw_summary = getattr(response, "content", "") or ""
@@ -313,6 +316,9 @@ Keep each memory concise and factual.
 Conversation:
 {conversation_text}
 """
+
+        if not llm:
+            return None
 
         response = await llm.ainvoke(extraction_prompt)
         raw_output = getattr(response, "content", "") or ""

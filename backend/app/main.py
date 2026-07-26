@@ -14,15 +14,9 @@ from backend.app.api.v1.user_onboarding import (
 from backend.app.api.v1.analytics import router as analytics_router
 
 
-from backend.app.api.v1 import tts
 from backend.app.api.v1 import documents
 
-from backend.app.api.v1.liveavatar import (
-    router as liveavatar_router,
-)
-from backend.app.api.v1.heygenavatar import (
-    router as heygen_router,
-)
+
 from backend.app.api.v1.tavus import (
     router as tavus_router,
 )
@@ -33,8 +27,7 @@ from backend.app.api.v1.openai_router import (
     router as openai_router,
 )
 
-from backend.app.graph.graph import build_graph
-from backend.app.graph.checkpointer import get_checkpointer
+
 
 
 @asynccontextmanager
@@ -44,28 +37,10 @@ async def lifespan(app: FastAPI):
     print("Starting AI Companion Platform...")
     print("=" * 80)
 
-    # ---------------------------------------------------------
-    # Initialize Async LangGraph
-    # ---------------------------------------------------------
-    async with get_checkpointer() as checkpointer:
-
-        print("[LangGraph] Setting up async checkpointer...")
-
-        await checkpointer.setup()
-
-        graph = build_graph().compile(
-            checkpointer=checkpointer
-        )
-
-        app.state.graph = graph
-
-        print("[LangGraph] Graph initialized successfully.")
-
-        try:
-            yield
-
-        finally:
-            print("[LangGraph] Closing graph...")
+    try:
+        yield
+    finally:
+        pass
 
     print("=" * 80)
     print("Shutting down AI Companion Platform...")
@@ -102,12 +77,9 @@ app.include_router(conversation_router, prefix="/api/v1/conversations", tags=["C
 app.include_router(chat_router, prefix="/api/v1/chat", tags=["Chat"])
 
 # --- UTILITIES ---
-app.include_router(tts.router, prefix="/api/v1/tts", tags=["Text To Speech"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 
-# --- AVATARS ---
-app.include_router(liveavatar_router, prefix="/api/v1/liveavatar", tags=["LiveAvatar"])
-app.include_router(heygen_router, prefix="/api/v1/heygenavatar", tags=["HeyGen Avatar"])
+
 
 # --- TAVUS + MCP INTEGRATION ---
 # NOTE: Because the prefix is /api/v1/tavus, the OpenAI-compatible endpoint 

@@ -123,7 +123,7 @@ export default function ChatInput({
       setSelectedFile(file);
       setUploading(true);
 
-      const result = await ragService.uploadDocument(file, companionId || "");
+      const result = await ragService.uploadDocument(file);
       console.log("Uploaded:", result);
       onDocumentUploaded?.(result.file_name);
     } catch (error) {

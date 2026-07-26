@@ -104,8 +104,7 @@ export default function RagSidebar({
           >
             Upload Documents
           </h3>
-
-          <DocumentUploader companionId={companionId || ""} />
+          <DocumentUploader />
         </div>
 
         {/* Documents Section */}

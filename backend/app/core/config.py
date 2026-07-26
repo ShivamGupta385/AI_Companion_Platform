@@ -14,25 +14,11 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: Optional[str] = None
 
-    ELEVENLABS_API_KEY: str
-    VOICE_ID: str
-
     PINECONE_API_KEY: str
     PINECONE_INDEX_NAME: str
 
-    LIVEAVATAR_API_KEY: str
-    LIVEAVATAR_AVATAR_ID: str
-
-    HEYGEN_API_KEY: str
-    HEYGEN_AVATAR_ID: str
-
     TAVUS_API_KEY: str
     TAVUS_BASE_URL: str
-    TAVUS_REPLICA_ID: str
-    TAVUS_PERSONA_ID: str
-
-    LIVEAVATAR_SECRET_ID: str
-    ELEVENLABS_AGENT_ID: str
     TAVUS_WEBHOOK_URL: Optional[str] = None
 
     # ---------------------------------

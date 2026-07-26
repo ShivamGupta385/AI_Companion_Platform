@@ -104,7 +104,7 @@ export default function ChatPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900">AI Companion Chat</h1>
-              <p className="text-sm text-slate-500">Personalized AI Assistant + LiveAvatar</p>
+              <p className="text-sm text-slate-500">Personalized AI Assistant</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -159,8 +159,6 @@ export default function ChatPage() {
                   <>
                     <ChatWindow
                       messages={messages}
-                      onSpeakStart={() => {}}
-                      onSpeakEnd={() => {}}
                     />
                     {loading && <TypingIndicator />}
                   </>

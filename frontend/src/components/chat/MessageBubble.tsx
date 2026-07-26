@@ -1,120 +1,15 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-
-import {
-  Loader2,
-  Square,
-  Volume2,
-} from "lucide-react";
-
-import { ttsService } from "@/services/tts.service";
-
 interface MessageBubbleProps {
   senderType: string;
   message: string;
-  onSpeakStart?: () => void;
-  onSpeakEnd?: () => void;
 }
 
 export default function MessageBubble({
   senderType,
   message,
-  onSpeakStart,
-  onSpeakEnd,
 }: MessageBubbleProps) {
   const isUser = senderType === "user";
-
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioUrlRef = useRef<string | null>(null);
-
-  const cleanupAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.onplay = null;
-      audioRef.current.onended = null;
-      audioRef.current.onerror = null;
-      audioRef.current = null;
-    }
-
-    if (audioUrlRef.current) {
-      URL.revokeObjectURL(audioUrlRef.current);
-      audioUrlRef.current = null;
-    }
-
-    setIsPlayingAudio(false);
-    setIsLoadingAudio(false);
-    onSpeakEnd?.();
-  };
-
-  const stopAudio = () => {
-    cleanupAudio();
-  };
-
-  const handleSpeak = async () => {
-    if (isUser) return;
-
-    // If same bubble is already speaking,
-    // clicking again should stop it.
-    if (isPlayingAudio || isLoadingAudio) {
-      stopAudio();
-      return;
-    }
-
-    try {
-      setIsLoadingAudio(true);
-
-      const blob = await ttsService.speak(message);
-
-      // 👇 ADDED: Safety check for null blob (LiveAvatar handles audio) 👇
-      if (!blob) {
-        console.log("No audio blob returned (Avatar is handling speech).");
-        setIsLoadingAudio(false);
-        return;
-      }
-
-      const url = URL.createObjectURL(blob);
-
-      audioUrlRef.current = url;
-
-      const audio = new Audio(url);
-
-      audioRef.current = audio;
-
-      audio.onplay = () => {
-        setIsLoadingAudio(false);
-        setIsPlayingAudio(true);
-        onSpeakStart?.();
-      };
-
-      audio.onended = () => {
-        cleanupAudio();
-      };
-
-      audio.onerror = () => {
-        console.error("Audio playback failed");
-        cleanupAudio();
-      };
-
-      await audio.play();
-    } catch (error) {
-      console.error("TTS Error:", error);
-      cleanupAudio();
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      cleanupAudio();
-    };
-  }, []);
 
   return (
     <div
@@ -195,53 +90,6 @@ export default function MessageBubble({
         >
           {message}
         </p>
-
-        {!isUser && (
-          <div className="mt-4 flex items-center">
-            <button
-              onClick={handleSpeak}
-              disabled={isLoadingAudio}
-              className={`
-                flex
-                items-center
-                gap-2
-                text-sm
-                font-medium
-                transition
-                ${
-                  isPlayingAudio
-                    ? "text-red-600 hover:text-red-700"
-                    : "text-violet-600 hover:text-violet-700"
-                }
-                ${
-                  isLoadingAudio
-                    ? "opacity-70 cursor-not-allowed"
-                    : ""
-                }
-              `}
-            >
-              {isLoadingAudio ? (
-                <>
-                  <Loader2
-                    size={16}
-                    className="animate-spin"
-                  />
-                  Loading...
-                </>
-              ) : isPlayingAudio ? (
-                <>
-                  <Square size={16} />
-                  Stop
-                </>
-              ) : (
-                <>
-                  <Volume2 size={16} />
-                  Listen
-                </>
-              )}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

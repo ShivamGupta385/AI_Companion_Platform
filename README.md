@@ -116,3 +116,59 @@ The platform should:
 - Provide meaningful support
 - Encourage growth without judgment
 - Be available whenever users need guidance
+---
+
+## Developer Setup Guide ???
+
+To contribute to the AI Companion App, follow these steps to run the full stack locally.
+
+### Prerequisites
+
+1. **Docker**: To run the PostgreSQL database locally without native installation.
+2. **uv**: An extremely fast Python package and project manager (replaces pip/poetry). Install it via curl -LsSf https://astral.sh/uv/install.sh | sh or pip install uv.
+3. **Node.js**: v18+ for running the Next.js frontend.
+
+### 1. Database Setup
+Spin up the local PostgreSQL database using Docker:
+```bash
+docker compose up -d
+```
+This will start a Postgres 15 container exposing port 5432.
+
+### 2. Environment Variables & Webhooks (Ngrok)
+Tavus requires a publicly accessible URL to send conversation transcripts via webhooks when a call ends. Since it cannot reach `localhost`, you must use ngrok to expose your local backend.
+
+1. Install ngrok and run it in a new terminal:
+```bash
+ngrok http 8000
+```
+2. Copy the provided `.env` template:
+```bash
+cp .env.example .env
+```
+3. Update `.env` with your specific API keys, and set `BACKEND_URL` to your forwarding ngrok URL (e.g., `https://abcdefg.ngrok-free.app`).
+
+### 3. Backend Setup & Run
+We use uv for lightning-fast dependency management. From the root directory:
+```bash
+# Apply database migrations
+uv run alembic upgrade head
+
+# Start the FastAPI development server
+uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+The backend will run on http://localhost:8000.
+
+### 4. Frontend Setup & Run
+In a new terminal window, navigate to the frontend folder:
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+```
+The frontend will run on http://localhost:3000.
+

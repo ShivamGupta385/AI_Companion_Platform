@@ -3,14 +3,10 @@ import MessageBubble from "./MessageBubble";
 
 interface ChatWindowProps {
   messages: Message[];
-  onSpeakStart?: () => void;
-  onSpeakEnd?: () => void;
 }
 
 export default function ChatWindow({
   messages,
-  onSpeakStart,
-  onSpeakEnd,
 }: ChatWindowProps) {
   return (
     <div
@@ -27,8 +23,6 @@ export default function ChatWindow({
           key={msg.id}
           senderType={msg.sender_type}
           message={msg.message_text}
-          onSpeakStart={onSpeakStart}
-          onSpeakEnd={onSpeakEnd}
         />
       ))}
     </div>
