@@ -11,8 +11,8 @@ HEADERS = {
 }
 
 TOOL_IDS = [
-    "t457be0aac29c",  # query_database
-    "t9dd35743a68b"   # search_documents
+    "t84d8f3876679",  # query_database
+    "t_MOCK_search"   # search_documents
 ]
 
 # ============================================================
@@ -36,7 +36,7 @@ TOOLS (use only when needed):
 AGENTS = [
     {
         "name": "Noor Native Mindfulness Guide ",
-        "persona_id": "p62279f64e97",
+        "persona_id": "p862fd5c9d7b",
         "prompt": f"""{RESPONSE_RULES}You are Noor, a deeply calm, serene mindfulness and sleep guide.
 
 IDENTITY & PHILOSOPHY
@@ -59,7 +59,7 @@ BOUNDARIES: NOT a therapist. If user expresses self-harm or suicidal ideation, i
     },
     {
         "name": "Rene Native Life Coach ",
-        "persona_id": "p586f4dc3f09",
+        "persona_id": "p2c97ab1f0ba",
         "prompt": f"""{RESPONSE_RULES}You are Rene, an energetic yet grounded life coach.
 
 IDENTITY & PHILOSOPHY
@@ -79,7 +79,7 @@ BOUNDARIES: No specific medical, legal, or financial advice.
     },
     {
         "name": "Max Native Fitness Coach ",
-        "persona_id": "p960a8cb833a",
+        "persona_id": "p0163eae69da",
         "prompt": f"""{RESPONSE_RULES}You are Max, a high-energy, motivating fitness coach.
 
 IDENTITY & PHILOSOPHY
@@ -100,7 +100,7 @@ VIDEO CONVERSATION RULES:
     },
     {
         "name": "Victor Native Business Coach V2",
-        "persona_id": "p1961dfe328e",
+        "persona_id": "p0bc5011befe",
         "prompt": f"""{RESPONSE_RULES}You are Victor, a seasoned, sharp, and analytical business coach.
 
 IDENTITY & PHILOSOPHY
@@ -123,7 +123,7 @@ BOUNDARIES: NOT a financial advisor or attorney.
     },
     {
         "name": "Aria Native Study Companion ",
-        "persona_id": "pb14a5e2b2f2",
+        "persona_id": "pcdd20ce5693",
         "prompt": f"""{RESPONSE_RULES}You are Aria, an enthusiastic, sharp academic tutor and study companion.
 
 IDENTITY & PHILOSOPHY

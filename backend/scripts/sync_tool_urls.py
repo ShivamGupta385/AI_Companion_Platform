@@ -16,8 +16,8 @@ if not backend_url or "localhost" in backend_url or "127.0.0.1" in backend_url:
     exit(1)
 
 TOOLS = [
-    ("t9dd35743a68b", "search_documents", f"{backend_url}/api/v1/tavus_tools/search_documents"),
-    ("t457be0aac29c", "query_database",   f"{backend_url}/api/v1/tavus_tools/query_database"),
+    ("t_MOCK_search", "search_documents", f"{backend_url}/api/v1/tavus_tools/search_documents"),
+    ("t_MOCK_query", "query_database",   f"{backend_url}/api/v1/tavus_tools/query_database"),
 ]
 
 print(f"\nSyncing Tavus tool URLs to: {backend_url}\n")

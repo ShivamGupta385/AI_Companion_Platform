@@ -118,57 +118,108 @@ The platform should:
 - Be available whenever users need guidance
 ---
 
-## Developer Setup Guide ???
+## Teammate Onboarding Guide (Branch: `optimised_code`)
 
-To contribute to the AI Companion App, follow these steps to run the full stack locally.
+Welcome to the team! To get this project running perfectly on your local machine, follow these steps. **You will not need to edit any application code** — everything is automated via setup scripts!
 
 ### Prerequisites
-
-1. **Docker**: To run the PostgreSQL database locally without native installation.
-2. **uv**: An extremely fast Python package and project manager (replaces pip/poetry). Install it via curl -LsSf https://astral.sh/uv/install.sh | sh or pip install uv.
+1. **Docker**: Ensure Docker Desktop is running.
+2. **uv**: We use `uv` for lightning-fast Python dependency management. Install via `curl -LsSf https://astral.sh/uv/install.sh | sh` or `pip install uv`.
 3. **Node.js**: v18+ for running the Next.js frontend.
+4. **Ngrok**: For receiving Tavus webhooks locally.
+5. **API Keys**: You will need a **Tavus API Key** and a **Pinecone API Key**.
 
-### 1. Database Setup
-Spin up the local PostgreSQL database using Docker:
+### 1. Clone & Checkout
+Clone the repository and switch to the optimized branch:
+```bash
+git clone <repo-url>
+cd ai-companion-platform
+git checkout optimised_code
+```
+
+### 2. Environment Variables (.env)
+We strictly use `.env` files for all secrets. 
+
+**Backend (`.env`)**
+Create your `.env` file in the root directory and add the following:
+```env
+# Database (use Port 5433 (or any other port number) to avoid conflicts with native Windows Postgres)
+DATABASE_URL=postgresql+psycopg://postgres:admin@localhost:5433/ai_companion
+
+# Security
+SECRET_KEY="your-random-secret-key-here"
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Pinecone (Create a free account and get an API key)
+PINECONE_API_KEY="your-pinecone-api-key"
+PINECONE_INDEX_NAME="ai-companion-index"
+
+# Tavus
+TAVUS_API_KEY="your-tavus-api-key"
+TAVUS_BASE_URL=https://tavusapi.com
+
+# We will set BACKEND_URL in step 7!
+```
+
+**Frontend (`frontend/.env.local`)**
+Navigate to the `frontend/` directory and create `.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000/api/v1
+```
+
+### 3. Spin up the Database
+Start the isolated PostgreSQL database using Docker:
 ```bash
 docker compose up -d
 ```
-This will start a Postgres 15 container exposing port 5432.
 
-### 2. Environment Variables & Webhooks (Ngrok)
-Tavus requires a publicly accessible URL to send conversation transcripts via webhooks when a call ends. Since it cannot reach `localhost`, you must use ngrok to expose your local backend.
-
-1. Install ngrok and run it in a new terminal:
+### 4. Run Database Migrations
+Create all the necessary tables in your empty database:
 ```bash
-ngrok http 8000
-```
-2. Copy the provided `.env` template:
-```bash
-cp .env.example .env
-```
-3. Update `.env` with your specific API keys, and set `BACKEND_URL` to your forwarding ngrok URL (e.g., `https://abcdefg.ngrok-free.app`).
-
-### 3. Backend Setup & Run
-We use uv for lightning-fast dependency management. From the root directory:
-```bash
-# Apply database migrations
 uv run alembic upgrade head
+```
 
-# Start the FastAPI development server
+### 5. Create Pinecone Index
+Run the automated script to spin up your Pinecone vector database. It will automatically read your `.env` to create an index with the correct name and dimensions:
+```bash
+uv run python -m backend.scripts.create_index
+```
+
+### 6. Run the Teammate Setup Script (CRITICAL)
+Tavus requires Personas and Tools to be registered **per account**. We built a robust script that automatically registers all the tools, creates the 5 AI companions on your personal Tavus account, and **dynamically updates the Python codebase** with your newly generated IDs!
+```bash
+uv run python -m backend.scripts.setup_teammate
+```
+
+### 7. Seed the Database
+Now that the codebase has been populated with your personal Tavus IDs, insert them into your database:
+```bash
+uv run python -m backend.scripts.seed_companions
+```
+
+### 8. Webhook Setup (Ngrok)
+Tavus needs to send webhooks to your local machine. 
+1. Open a new terminal and run: `ngrok http 8000`
+2. Copy the `Forwarding` URL (e.g., `https://1234-abcd.ngrok-free.app`)
+3. Paste it into your `.env` file as `BACKEND_URL="https://1234-abcd.ngrok-free.app"`
+4. Run the sync script so Tavus knows where to send webhooks:
+```bash
+uv run python -m backend.scripts.sync_tool_urls
+```
+*(Note: You must run this sync script every time you restart ngrok and get a new URL!)*
+
+### 9. Run the App!
+**Start the Backend:**
+```bash
 uv run uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-The backend will run on http://localhost:8000.
-
-### 4. Frontend Setup & Run
-In a new terminal window, navigate to the frontend folder:
+**Start the Frontend:**
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm run dev
 ```
-The frontend will run on http://localhost:3000.
+
+Go to `http://localhost:3000/register`, create an account, and start chatting with your AI companions!
 

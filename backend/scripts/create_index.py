@@ -8,7 +8,7 @@ pc = Pinecone(
     api_key=os.getenv("PINECONE_API_KEY")
 )
 
-index_name = "rag-index"
+index_name = os.getenv("PINECONE_INDEX_NAME", "ai-companion-index")
 
 if index_name not in pc.list_indexes().names():
 

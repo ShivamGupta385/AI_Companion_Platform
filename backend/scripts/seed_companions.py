@@ -11,7 +11,7 @@ def seed_companions():
             "voice_id": "noor_voice",
             "avatar_provider": "tavus",
             "tavus_replica_id": "r378d159c7b0",
-            "tavus_persona_id": "p9badc234377"
+            "tavus_persona_id": "p862fd5c9d7b"
         },
         {
             "name": "Rene",
@@ -19,7 +19,7 @@ def seed_companions():
             "voice_id": "rene_voice",
             "avatar_provider": "tavus",
             "tavus_replica_id": "r987f6e6f73c",
-            "tavus_persona_id": "p66ae06de687"
+            "tavus_persona_id": "p2c97ab1f0ba"
         },
         {
             "name": "Max",
@@ -27,7 +27,7 @@ def seed_companions():
             "voice_id": "max_voice",
             "avatar_provider": "tavus",
             "tavus_replica_id": "rf8f3aa4b33e",
-            "tavus_persona_id": "p743f8344358"
+            "tavus_persona_id": "p0163eae69da"
         },
         {
             "name": "Victor",
@@ -35,7 +35,7 @@ def seed_companions():
             "voice_id": "victor_voice",
             "avatar_provider": "tavus",
             "tavus_replica_id": "rdd4c86e5e1a",
-            "tavus_persona_id": "p3573ed2b6b3"
+            "tavus_persona_id": "p0bc5011befe"
         },
         {
             "name": "Aria",
@@ -43,7 +43,7 @@ def seed_companions():
             "voice_id": "aria_voice",
             "avatar_provider": "tavus",
             "tavus_replica_id": "rfc63eab317e",
-            "tavus_persona_id": "p6d0cc0df08a"
+            "tavus_persona_id": "pcdd20ce5693"
         }
     ]
 
