@@ -173,6 +173,7 @@ Start the isolated PostgreSQL database using Docker:
 ```bash
 docker compose up -d
 ```
+*(Note: If you need to use a different port than `5433`, you must change the host port mapping in `docker-compose.yml` AND update the `DATABASE_URL` in your `.env` file to match.)*
 
 ### 4. Run Database Migrations
 Create all the necessary tables in your empty database:
