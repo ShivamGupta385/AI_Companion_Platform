@@ -186,6 +186,7 @@ Run the automated script to spin up your Pinecone vector database. It will autom
 ```bash
 uv run python -m backend.scripts.create_index
 ```
+*(Note: This project uses a local open-source Hugging Face model (`sentence-transformers/all-MiniLM-L6-v2`) for embeddings. This means you do NOT need an OpenAI API key for document search, and the Pinecone index is automatically configured for exactly 384 dimensions to match this model!)*
 
 ### 6. Run the Teammate Setup Script (CRITICAL)
 Tavus requires Personas and Tools to be registered **per account**. We built a robust script that automatically registers all the tools, creates the 5 AI companions on your personal Tavus account, and **dynamically updates the Python codebase** with your newly generated IDs!
