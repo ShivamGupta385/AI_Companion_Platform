@@ -1,8 +1,8 @@
-# AI Companion Platform (5-Agent MVP)
+# Kinnect: Multi-Agent AI Companion & Interactive Video Conversation Platform
 
 ## About the Project
 
-AI Companion Platform is an enterprise MVP that provides users with a team of AI companions designed to help them grow in different areas of life.
+This AI Companion Platform is an enterprise MVP that provides users with a team of AI companions designed to help them grow in different areas of life.
 
 Unlike traditional chatbots, these companions remember past conversations, understand user goals, and work together to provide personalized guidance over time.
 
@@ -139,7 +139,7 @@ The platform should:
 ## Repository Structure
 
 ```
-ai-companion-platform/
+Kinnect/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/          # REST Endpoints (auth, companions, tavus_tools, documents, etc.)
@@ -162,7 +162,7 @@ ai-companion-platform/
 
 ---
 
-## Developer Setup & Installation Guide (Branch: `optimised_code`)
+## Developer Setup & Installation Guide 
 
 To get this project running perfectly on your local machine, follow these steps. **You will not need to edit any application code** — everything is automated via setup scripts!
 
@@ -174,11 +174,10 @@ To get this project running perfectly on your local machine, follow these steps.
 5. **API Keys**: You will need a **Tavus API Key** and a **Pinecone API Key**.
 
 ### 1. Clone & Checkout
-Clone the repository and switch to the optimized branch:
+Clone the repository:
 ```bash
-git clone https://github.com/ShivamGupta385/AI_Companion_Platform.git
-cd ai-companion-platform
-git checkout optimised_code
+git clone https://github.com/ShivamGupta385/Kinnect.git
+cd Kinnect
 ```
 
 ### 2. Environment Variables (.env)
