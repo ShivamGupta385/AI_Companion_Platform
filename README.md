@@ -118,6 +118,42 @@ The platform should:
 - Be available whenever users need guidance
 ---
 
+## Tech Stack Overview
+
+- **Backend Architecture**: FastAPI, Python 3.11+, SQLAlchemy ORM, PostgreSQL database, Alembic migrations.
+- **AI & Real-Time Video**: Tavus Conversational Video API (Persona IDs, custom prompts, webhook ingestion), Tavus Magic Canvas.
+- **RAG & Vector Storage**: Pinecone Vector Database, Hugging Face `sentence-transformers/all-MiniLM-L6-v2` local embeddings.
+- **Frontend Architecture**: Next.js 14+ (App Router), TypeScript, TailwindCSS, Lucide Icons, Custom Activity Calendar.
+- **DevOps & Tooling**: Docker Compose (isolated DB container), `uv` (fast Python package manager), Ngrok (webhook tunneling).
+
+---
+
+## Repository Structure
+
+```
+ai-companion-platform/
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/          # REST Endpoints (auth, companions, tavus_tools, documents, etc.)
+│   │   ├── core/            # Config, security, database session management
+│   │   ├── db/              # SQLAlchemy session initialization
+│   │   ├── models/          # PostgreSQL database schemas (11 models)
+│   │   ├── schemas/         # Pydantic schemas for API validation
+│   │   ├── services/        # Vector store & document ingestion services
+│   │   └── main.py          # FastAPI application entrypoint
+│   └── scripts/             # Automated setup, seeding, and tool sync scripts
+├── frontend/                # Next.js App Router frontend application
+│   ├── src/
+│   │   ├── app/             # Page routes (dashboard, companions, onboarding, calendar, etc.)
+│   │   ├── components/      # React components (TavusAvatar, Heatmap, OnboardingForm, UI)
+│   │   └── lib/             # API client and utility helpers
+├── alembic/                 # Database migration scripts
+├── docker-compose.yml       # Docker database configuration
+└── README.md                # Project documentation
+```
+
+---
+
 ## Teammate Onboarding Guide (Branch: `optimised_code`)
 
 Welcome to the team! To get this project running perfectly on your local machine, follow these steps. **You will not need to edit any application code** — everything is automated via setup scripts!
