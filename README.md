@@ -1,4 +1,4 @@
-# AI Companion Platform — 5-Agent MVP
+# AI Companion Platform (5-Agent MVP)
 
 ## About the Project
 
