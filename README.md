@@ -166,9 +166,9 @@ ai-companion-platform/
 
 ---
 
-## Teammate Onboarding Guide (Branch: `optimised_code`)
+## Developer Setup & Installation Guide (Branch: `optimised_code`)
 
-Welcome to the team! To get this project running perfectly on your local machine, follow these steps. **You will not need to edit any application code** — everything is automated via setup scripts!
+To get this project running perfectly on your local machine, follow these steps. **You will not need to edit any application code** — everything is automated via setup scripts!
 
 ### Prerequisites
 1. **Docker**: Ensure Docker Desktop is running.
@@ -236,7 +236,7 @@ uv run python -m backend.scripts.create_index
 ```
 *(Note: This project uses a local open-source Hugging Face model (`sentence-transformers/all-MiniLM-L6-v2`) for embeddings. This means you do NOT need an OpenAI API key for document search, and the Pinecone index is automatically configured for exactly 384 dimensions to match this model!)*
 
-### 6. Run the Teammate Setup Script (CRITICAL)
+### 6. Run the Developer Setup Script (CRITICAL)
 Tavus requires Personas and Tools to be registered **per account**. We built a robust script that automatically registers all the tools, creates the 5 AI companions on your personal Tavus account, and **dynamically updates the Python codebase** with your newly generated IDs!
 ```bash
 uv run python -m backend.scripts.setup_teammate
