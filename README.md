@@ -10,7 +10,7 @@ The goal is to create a supportive AI ecosystem that feels consistent, intellige
 
 ---
 
-## 🎬 Project Walkthrough & Demo Video
+## Project Walkthrough & Demo Video
 
 [![Watch Full Demo Video on Vimeo](https://img.shields.io/badge/▶_Watch_Full_Demo_Video-Vimeo-00ADEF?style=for-the-badge&logo=vimeo&logoColor=white)](https://vimeo.com/1213563606)
 
@@ -22,7 +22,7 @@ Experience the platform in action! Watch our full technical walkthrough showcasi
 
 ### Meet the Companions
 
-### 📚 Aria — Study Companion
+### Aria — Study Companion
 
 A patient and encouraging tutor who helps users understand concepts, prepare for exams, improve learning habits, and build academic confidence.
 
@@ -35,7 +35,7 @@ A patient and encouraging tutor who helps users understand concepts, prepare for
 
 ---
 
-### 🌙 Noor — Mindfulness & Sleep Guide
+### Noor — Mindfulness & Sleep Guide
 
 A calm and compassionate companion focused on mental wellness, stress management, mindfulness, and healthy sleep routines.
 
@@ -48,7 +48,7 @@ A calm and compassionate companion focused on mental wellness, stress management
 
 ---
 
-### 🎯 Rene — Life Coach
+### Rene — Life Coach
 
 The central coaching companion that helps users gain clarity, build habits, set goals, and take meaningful action.
 
@@ -61,7 +61,7 @@ The central coaching companion that helps users gain clarity, build habits, set 
 
 ---
 
-### 💪 Max — Fitness Coach
+### Max — Fitness Coach
 
 An energetic fitness mentor that helps users stay active, build healthy habits, and maintain consistency in their wellness journey.
 
@@ -74,7 +74,7 @@ An energetic fitness mentor that helps users stay active, build healthy habits, 
 
 ---
 
-### 📈 Victor — Business Coach
+### Victor — Business Coach
 
 A strategic advisor that helps entrepreneurs, professionals, and creators make better business and career decisions.
 
