@@ -1,17 +1,5 @@
 # AI Companion Platform — 5-Agent MVP
 
-[![Watch Demo Video](https://img.shields.io/badge/▶_Watch_Demo_Video-Vimeo-00ADEF?style=for-the-badge&logo=vimeo&logoColor=white)](https://vimeo.com/1213563606)
-
----
-
-## 🎬 Project Walkthrough & Demo Video
-
-Experience the platform in action! Watch our full technical walkthrough showcasing real-time video AI companions, interactive Magic Canvas overlays, and multi-agent workflows:
-
-🎥 **[Watch the Working Platform Demo on Vimeo](https://vimeo.com/1213563606)**
-
----
-
 ## About the Project
 
 AI Companion Platform is an enterprise MVP that provides users with a team of AI companions designed to help them grow in different areas of life.
@@ -19,6 +7,14 @@ AI Companion Platform is an enterprise MVP that provides users with a team of AI
 Unlike traditional chatbots, these companions remember past conversations, understand user goals, and work together to provide personalized guidance over time.
 
 The goal is to create a supportive AI ecosystem that feels consistent, intelligent, and helpful in everyday life.
+
+---
+
+## 🎬 Project Walkthrough & Demo Video
+
+[![Watch Full Demo Video on Vimeo](https://img.shields.io/badge/▶_Watch_Full_Demo_Video-Vimeo-00ADEF?style=for-the-badge&logo=vimeo&logoColor=white)](https://vimeo.com/1213563606)
+
+Experience the platform in action! Watch our full technical walkthrough showcasing real-time video AI companions, interactive Magic Canvas overlays, and multi-agent workflows.
 
 ---
 
