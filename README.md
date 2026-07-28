@@ -1,4 +1,4 @@
-# AI Companion App
+# AI Companion Platform — 5-Agent MVP
 
 ## About the Project
 
@@ -168,7 +168,7 @@ Welcome to the team! To get this project running perfectly on your local machine
 ### 1. Clone & Checkout
 Clone the repository and switch to the optimized branch:
 ```bash
-git clone <repo-url>
+git clone https://github.com/ShivamGupta385/AI_Companion_Platform.git
 cd ai-companion-platform
 git checkout optimised_code
 ```
